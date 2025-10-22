@@ -7,6 +7,20 @@
     <title>new_b2b_write</title>
   </head>
   <body>
+					<div class="position-relative">
+						<label class="label">배송형태</label>
+						<label class="select">
+							<select name="ex_1" id="ex_1" onchange="checkPinfo(); setDefaultAddr(); deliverType(this)" data-name="배송형태" required>
+								<option value="" disabled >배송형태 선택</option>
+								<option value="익일수령택배" >익일수령택배</option>
+								<option value="방문수령" >방문수령</option>
+								<option value="퀵착불" >퀵착불</option>
+								<option value="퀵선불" >퀵선불</option>
+								<option value="대리배송" >대리배송</option>
+								<option value="전자배송" >전자배송</option>
+							</select><i></i>
+						</label>
+					</div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
