@@ -34,10 +34,10 @@
   }
 
   let 선택상자열림 = $state(false);
-  let 선택상자항목 = $state([]);
+  let 선택상자항목: string[]|object[] = $state([]);
 
-  let 전체품목 = $state();
-  $inspect(선택상자열림);
+  let 전체품목 = $state({});
+  $inspect(선택상자항목);
 
 
   const 배송형태종류 = ['익일수령택배','방문수령','퀵착불','퀵선불','대리배송','전자배송',''] as const;
@@ -141,10 +141,13 @@
     }
   });
 
-  function 선택상자열기 (유형: string, 요소: HTMLElement) {
+  function 선택상자열기 (유형: string, 요소: HTMLElement, 브랜드: string|undefined = undefined) {
     선택상자열림 = true;
     if (유형 == '브랜드') {
-      
+      선택상자항목 = Object.keys(전체품목);
+    }
+    if (유형 == '제품명') {
+
     }
   }
   
@@ -217,7 +220,7 @@
           </div>
           <div class="col" style="--flex-basis: 80%;">
             <div><label for="product" class="label block">품목명</label></div>
-            <input type="text" id="product" bind:value={품목.productInfo.product} onfocus={(e)=>선택상자열기('품목명',e.currentTarget)} onblur={()=>선택상자열림=false}>
+            <input type="text" id="product" bind:value={품목.productInfo.product} onfocus={(e)=>선택상자열기('품목명',e.currentTarget,품목.productInfo.brand)} onblur={()=>선택상자열림=false}>
           </div>
           <div class="col" style="--flex-basis: 20%;">
             <div><label for="sell_price" class="label block">소비자가</label></div>
