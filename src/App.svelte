@@ -230,7 +230,6 @@
 
   function 선택상자조정() {
     if (!(선택상자호출자.length && 컨테이너 && isHTMLElement(컨테이너))) return;
-    if (!선택상자열림) return;
     const 호출자속성 = 선택상자호출자[0].getBoundingClientRect();
     컨테이너.style.setProperty("--selectbox_top", String(호출자속성.bottom));
     컨테이너.style.setProperty("--selectbox_left", String(호출자속성.left));
