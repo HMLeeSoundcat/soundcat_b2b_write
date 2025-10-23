@@ -863,7 +863,7 @@
     flex-grow: 1;
   }
   @media screen and (max-width: 512px) {
-    .row .col {
+    .app_row .app_col {
       flex-basis: 100%;
     }
   }
