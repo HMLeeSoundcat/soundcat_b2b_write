@@ -478,7 +478,7 @@
         {#if !품목.collapsed}
           <div class="app_body" transition:fly={{ y: -10, duration: 100 }}>
             {#if 배송형태 && ["대리배송", "익일수령택배", "퀵착불"].includes(배송형태)}
-              <div class="deliveryInfo row">
+              <div class="deliveryInfo app_row">
                 <div class="app_col" style="--flex-basis: 33%;">
                   <div><label for="id_{인덱스}_name" class="app_label block">고객명</label></div>
                   <input type="text" id="id_{인덱스}_name" bind:value={품목.deliveryInfo.name} />
@@ -524,7 +524,7 @@
               </div>
               <hr />
             {/if}
-            <div class="prodInfo row">
+            <div class="prodInfo app_row">
               <div class="app_col" style="--flex-basis: 20%;">
                 <div><label for="id_{인덱스}_brand" class="app_label block">브랜드</label></div>
                 <input
