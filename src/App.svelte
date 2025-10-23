@@ -470,7 +470,7 @@
             </div>
           </div>
           <div class="action">
-            {#if 인덱스 > 0}
+            {#if 품목리스트.length > 1}
               <button type="button" onclick={() => 품목리스트.splice(인덱스, 1)}>삭제</button>
             {/if}
           </div>
