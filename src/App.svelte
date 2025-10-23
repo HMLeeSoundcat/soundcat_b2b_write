@@ -453,7 +453,7 @@
         transition:fly={{ y: -10, duration: 100 }}
       >
         <div class="app_header">
-          <button class="arcodian" onclick={() => (품목.collapsed = !품목.collapsed)}>{품목.collapsed ? "►" : "▼"}</button>
+          <button type="button" class="arcodian" onclick={() => (품목.collapsed = !품목.collapsed)}>{품목.collapsed ? "►" : "▼"}</button>
           <span><strong>품목{인덱스 + 1}</strong></span>
           <div class="radio_vertical">
             <div class="radio">
@@ -471,7 +471,7 @@
           </div>
           <div class="action">
             {#if 인덱스 > 0}
-              <button onclick={() => 품목리스트.splice(인덱스, 1)}>삭제</button>
+              <button type="button" onclick={() => 품목리스트.splice(인덱스, 1)}>삭제</button>
             {/if}
           </div>
         </div>
@@ -491,12 +491,13 @@
                   <div><label for="id_{인덱스}_hp2" class="label block">전화번호2</label></div>
                   <input type="text" id="id_{인덱스}_hp2" bind:value={품목.deliveryInfo.hp2} />
                 </div>
-                <div class="col" style="--flex-basis: 100%;"><div class="label block"><span style="margin-right: 0.5em">주소</span><button onclick={e => 우편번호검색(e, 품목, 인덱스)}>주소 검색</button></div></div>
+                <div class="col" style="--flex-basis: 100%;"><div class="label block"><span style="margin-right: 0.5em">주소</span><button type="button" onclick={e => 우편번호검색(e, 품목, 인덱스)}>주소 검색</button></div></div>
                 {#if 우편번호검색호출인덱스 == 인덱스 && 우편번호검색열림}
                   <div class="postcodebox col" style="--flex-basis: 100%" transition:fly={{ y: -10, duration: 100 }}>
                     <div class="app_header">
                       우편번호검색
                       <button
+                        type="button"
                         onclick={() => {
                           우편번호검색열림 = false;
                         }}>닫기</button
@@ -605,7 +606,7 @@
     {/each}
   </div>
   <div class="app_footer">
-    <button onclick={() => 품목추가(true)}>추가</button>
+    <button type="button" onclick={() => 품목추가(true)}>추가</button>
     <div style="display: flex; align-items:center;">
       <div style="margin: 0; padding: 0.5em 0.5em calc(0.5em - 1px); border: 1px solid #ddd; border-right: none; box-sizing: border-box; background: #eee; border-radius: 4px 0 0 4px">총합계</div>
       <input
@@ -620,7 +621,7 @@
       />
     </div>
     <div class="gap">&nbsp;</div>
-    <div><button onclick={() => 엑셀파일선택?.click()}>엑셀자료 불러오기</button><input hidden type="file" accept=".xlsx,.xls" bind:this={엑셀파일선택} onchange={엑셀파싱} /></div>
+    <div><button type="button" onclick={() => 엑셀파일선택?.click()}>엑셀자료 불러오기</button><input hidden type="file" accept=".xlsx,.xls" bind:this={엑셀파일선택} onchange={엑셀파싱} /></div>
   </div>
   {#if 선택상자열림}
     <div class="select_box" bind:this={선택상자} transition:fly={{ y: -10, duration: 100 }}>
@@ -628,6 +629,7 @@
         {#each 선택상자항목 as 선택항목, 인덱스}
           <li>
             <button
+              type="button"
               class:searched={선택상자선택항목 == 인덱스}
               onclick={() => {
                 let 새선택항목 = 선택항목;
@@ -685,6 +687,7 @@
     <div class="inner" transition:fly={{ y: 10, duration: 100 }}>
       <div class="app_header">
         <span>엑셀데이터 선택중입니다.</span><button
+          type="button"
           onclick={() => {
             엑셀데이터선택창 = false;
             엑셀로딩 = false;
@@ -715,7 +718,7 @@
                   </select>
                 </div>
               {/each}
-              <div class="col" style="--flex-basis: 100%; padding-top: 1em; display: flex; gap: 1em;"><button onclick={() => 엑셀자료입력()}>교체</button><button onclick={() => 엑셀자료입력(true)}>추가</button></div>
+              <div class="col" style="--flex-basis: 100%; padding-top: 1em; display: flex; gap: 1em;"><button type="button" onclick={() => 엑셀자료입력()}>교체</button><button type="button" onclick={() => 엑셀자료입력(true)}>추가</button></div>
             </div>
           {/if}
         </div>
