@@ -2,8 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="/vite.svg" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0" />
     <title>new_b2b_write</title>
     <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -12,8 +17,17 @@
     <div class="position-relative">
       <label class="label">배송형태</label>
       <label class="select">
-        <select name="ex_1" id="ex_1" onchange="checkPinfo(); setDefaultAddr(); deliverType(this)" data-name="배송형태" required>
-          <option value="" disabled>배송형태 선택</option>
+        <select
+          name="ex_1"
+          id="ex_1"
+          onchange="checkPinfo(); setDefaultAddr(); deliverType(this)"
+          data-name="배송형태"
+          required>
+          <option
+            value=""
+            disabled>
+            배송형태 선택
+          </option>
           <option value="익일수령택배">익일수령택배</option>
           <option value="방문수령">방문수령</option>
           <option value="퀵착불">퀵착불</option>
@@ -24,9 +38,14 @@
       </label>
     </div>
     <div id="app"></div>
-    <textarea style="width: 100%; height: 400px; margin-top: 1em" id="data"></textarea>
-    <script type="module" src="/src/main.ts"></script>
+    <textarea
+      style="width: 100%; height: 400px; margin-top: 1em"
+      id="data"></textarea>
+    <script
+      type="module"
+      src="/src/main.ts"></script>
     <script>
+      let orderType = "대기";
       function setData(data) {
         document.querySelector("#data").value = JSON.stringify(data);
       }
@@ -37,6 +56,19 @@
           hp2: "123123123",
           postcode: "3456357",
         };
+      }
+
+      function setOrderType(ot) {
+        orderType = ot;
+        return orderType;
+      }
+
+      function getOrderType() {
+        return orderType;
+      }
+
+      function setDeliveryType(v) {
+        document.querySelector("#ex_1").value = v;
       }
     </script>
   </body>
