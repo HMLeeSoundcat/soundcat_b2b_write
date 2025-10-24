@@ -479,17 +479,17 @@
           <button type="button" class="arcodian" onclick={() => (품목.collapsed = !품목.collapsed)}>{품목.collapsed ? "►" : "▼"}</button>
           <span><strong>품목{인덱스 + 1}</strong></span>
           <div class="radio_vertical">
-            <div class="radio">
+            <div class="app_radio">
               <input type="radio" id="id_{인덱스}_itemType1" name="itemType_{인덱스}" value="0" bind:group={품목.productInfo.itemType} />
-              <label class="label" for="id_{인덱스}_itemType1">일반</label>
+              <label class="app_label" for="id_{인덱스}_itemType1">일반</label>
             </div>
-            <div class="radio">
+            <div class="app_radio">
               <input type="radio" id="id_{인덱스}_itemType2" name="itemType_{인덱스}" value="1" bind:group={품목.productInfo.itemType} />
-              <label class="label" for="id_{인덱스}_itemType2">데모(40%)</label>
+              <label class="app_label" for="id_{인덱스}_itemType2">데모(40%)</label>
             </div>
-            <div class="radio">
+            <div class="app_radio">
               <input type="radio" id="id_{인덱스}_itemType3" name="itemType_{인덱스}" value="2" bind:group={품목.productInfo.itemType} />
-              <label class="label" for="id_{인덱스}_itemType3">데모(50%)</label>
+              <label class="app_label" for="id_{인덱스}_itemType3">데모(50%)</label>
             </div>
           </div>
           <div class="action">
@@ -499,22 +499,22 @@
           </div>
         </div>
         {#if !품목.collapsed}
-          <div class="body" transition:fly={{ y: -10, duration: 100 }}>
+          <div class="app_body" transition:fly={{ y: -10, duration: 100 }}>
             {#if 배송형태 && ["대리배송", "익일수령택배", "퀵착불"].includes(배송형태)}
-              <div class="deliveryInfo row">
-                <div class="col" style="--flex-basis: 33%;">
-                  <div><label for="id_{인덱스}_name" class="label block">고객명</label></div>
+              <div class="deliveryInfo app_row">
+                <div class="app_col" style="--flex-basis: 33%;">
+                  <div><label for="id_{인덱스}_name" class="app_label block">고객명</label></div>
                   <input type="text" id="id_{인덱스}_name" bind:value={품목.deliveryInfo.name} />
                 </div>
-                <div class="col" style="--flex-basis: 33%;">
-                  <div><label for="id_{인덱스}_hp1" class="label block">전화번호1</label></div>
+                <div class="app_col" style="--flex-basis: 33%;">
+                  <div><label for="id_{인덱스}_hp1" class="app_label block">전화번호1</label></div>
                   <input type="text" id="id_{인덱스}_hp1" bind:value={품목.deliveryInfo.hp1} />
                 </div>
-                <div class="col" style="--flex-basis: 33%;">
-                  <div><label for="id_{인덱스}_hp2" class="label block">전화번호2</label></div>
+                <div class="app_col" style="--flex-basis: 33%;">
+                  <div><label for="id_{인덱스}_hp2" class="app_label block">전화번호2</label></div>
                   <input type="text" id="id_{인덱스}_hp2" bind:value={품목.deliveryInfo.hp2} />
                 </div>
-                <div class="col" style="--flex-basis: 100%;"><div class="label block"><span style="margin-right: 0.5em">주소</span><button type="button" onclick={e => 우편번호검색(품목)}>주소 검색</button></div></div>
+                <div class="app_col" style="--flex-basis: 100%;"><div class="app_label block"><span style="margin-right: 0.5em">주소</span><button type="button" onclick={e => 우편번호검색(품목)}>주소 검색</button></div></div>
                 {#if 우편번호검색열림[품목.uuid]}
                   <div class="postcodebox col" style="--flex-basis: 100%" transition:fly={{ y: -10, duration: 100 }}>
                     <div class="app_header">
@@ -525,30 +525,30 @@
                           우편번호검색열림[품목.uuid] = false;
                         }}>닫기</button>
                     </div>
-                    <div class="body" bind:this={우편번호검색상자[품목.uuid]}></div>
+                    <div class="app_body" bind:this={우편번호검색상자[품목.uuid]}></div>
                   </div>
                 {/if}
-                <div class="col" style="--flex-basis: 50%">
+                <div class="app_col" style="--flex-basis: 50%">
                   <input type="text" placeholder="우편번호" bind:value={품목.deliveryInfo.postcode} />
                 </div>
-                <div class="col" style="--flex-basis: 50%">
+                <div class="app_col" style="--flex-basis: 50%">
                   <input type="text" placeholder="배송메시지" bind:value={품목.deliveryInfo.msg} />
                 </div>
-                <div class="col" style="--flex-basis: 100%">
+                <div class="app_col" style="--flex-basis: 100%">
                   <input type="text" placeholder="기본주소" bind:value={품목.deliveryInfo.addr1} />
                 </div>
-                <div class="col" style="--flex-basis: 50%">
+                <div class="app_col" style="--flex-basis: 50%">
                   <input bind:this={우편번호상세입력란[품목.uuid]} type="text" placeholder="상세주소" bind:value={품목.deliveryInfo.addr2} />
                 </div>
-                <div class="col" style="--flex-basis: 50%">
+                <div class="app_col" style="--flex-basis: 50%">
                   <input type="text" placeholder="참고항목" bind:value={품목.deliveryInfo.addr3} />
                 </div>
               </div>
               <hr />
             {/if}
-            <div class="prodInfo row">
-              <div class="col" style="--flex-basis: 20%;">
-                <div><label for="id_{인덱스}_brand" class="label block">브랜드</label></div>
+            <div class="prodInfo app_row">
+              <div class="app_col" style="--flex-basis: 20%;">
+                <div><label for="id_{인덱스}_brand" class="app_label block">브랜드</label></div>
                 <input
                   type="text"
                   placeholder="브랜드"
@@ -560,8 +560,8 @@
                     e.currentTarget.removeEventListener("keydown", 선택상자검색항목선택);
                   }} />
               </div>
-              <div class="col" style="--flex-basis: {품목.productInfo.useprop || 품목.productInfo.PROD_CD == 'etc_001' ? '40' : '80'}%;">
-                <div><label for="id_{인덱스}_product" class="label block">품목명 <span style="font-weight:normal; font-size: 0.9em">(찾는 품목이 없는 경우 선택 없이 진행 가능)</span></label></div>
+              <div class="app_col" style="--flex-basis: {품목.productInfo.useprop || 품목.productInfo.PROD_CD == 'etc_001' ? '40' : '80'}%;">
+                <div><label for="id_{인덱스}_product" class="app_label block">품목명 <span style="font-weight:normal; font-size: 0.9em">(찾는 품목이 없는 경우 선택 없이 진행 가능)</span></label></div>
                 <input
                   type="text"
                   placeholder="브랜드를 선택하지 않아도 품목 선택 가능"
@@ -575,17 +575,17 @@
                   }} />
               </div>
               {#if 품목.productInfo.useprop || 품목.productInfo.PROD_CD == "etc_001"}
-                <div class="col" style="--flex-basis: 40%;">
-                  <div><label for="id_{인덱스}_prop" class="label block">옵션</label></div>
+                <div class="app_col" style="--flex-basis: 40%;">
+                  <div><label for="id_{인덱스}_prop" class="app_label block">옵션</label></div>
                   <input type="text" id="id_{인덱스}_prop" bind:value={품목.productInfo.prop} />
                 </div>
               {/if}
-              <div class="col" style="--flex-basis: 20%;">
-                <div><label for="id_{인덱스}_sell_price" class="label block">소비자가</label></div>
+              <div class="app_col" style="--flex-basis: 20%;">
+                <div><label for="id_{인덱스}_sell_price" class="app_label block">소비자가</label></div>
                 <input type="text" id="id_{인덱스}_sell_price" value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price))} readonly />
               </div>
-              <div class="col" style="--flex-basis: 20%;">
-                <div><label for="id_{인덱스}_dome_price" class="label block">공급단가</label></div>
+              <div class="app_col" style="--flex-basis: 20%;">
+                <div><label for="id_{인덱스}_dome_price" class="app_label block">공급단가</label></div>
                 <input
                   type="text"
                   id="id_{인덱스}_dome_price"
@@ -594,8 +594,8 @@
                     가격계산(e, 품목, "공급단가");
                   }} />
               </div>
-              <div class="col" style="--flex-basis: 10%;">
-                <div><label for="id_{인덱스}_qty" class="label block">수량</label></div>
+              <div class="app_col" style="--flex-basis: 10%;">
+                <div><label for="id_{인덱스}_qty" class="app_label block">수량</label></div>
                 <input
                   type="text"
                   id="id_{인덱스}_qty"
@@ -604,8 +604,8 @@
                     가격계산(e, 품목, "수량");
                   }} />
               </div>
-              <div class="col" style="--flex-basis: 10%;">
-                <div><label for="id_{인덱스}_margin" class="label block">마진(%)</label></div>
+              <div class="app_col" style="--flex-basis: 10%;">
+                <div><label for="id_{인덱스}_margin" class="app_label block">마진(%)</label></div>
                 <input
                   type="text"
                   id="id_{인덱스}_margin"
@@ -614,8 +614,8 @@
                     가격계산(e, 품목, "마진");
                   }} />
               </div>
-              <div class="col" style="--flex-basis: 40%;">
-                <div><label for="id_{인덱스}_total_dome" class="label block">공급합계</label></div>
+              <div class="app_col" style="--flex-basis: 40%;">
+                <div><label for="id_{인덱스}_total_dome" class="app_label block">공급합계</label></div>
                 <input type="text" id="id_{인덱스}_total_dome" value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.total_dome))} readonly />
               </div>
             </div>
@@ -711,20 +711,20 @@
             엑셀양식 = [];
           }}>닫기</button>
       </div>
-      <div class="body">
+      <div class="app_body">
         <div class="steps">
-          <div class="label">열 제목으로 삼을 줄을 선택해주세요:</div>
+          <div class="app_label">열 제목으로 삼을 줄을 선택해주세요:</div>
           <select name="column" id="column" size="5" bind:value={엑셀제목줄} style="margin-bottom: 1em;">
             {#each 엑셀데이터 as 줄, 인덱스}
               <option value={인덱스}>{줄.join(" | ")}</option>
             {/each}
           </select>
           {#if 엑셀제목줄 >= 0}
-            <div class="label">입력하고자 하는 데이터를 선택해주세요:</div>
-            <div class="row">
+            <div class="app_label">입력하고자 하는 데이터를 선택해주세요:</div>
+            <div class="app_row">
               {#each [{ label: "고객명", width: "33%" }, { label: "전화번호1", width: "33%" }, { label: "전화번호2", width: "33%" }, { label: "우편번호", width: "50%" }, { label: "배송메시지", width: "50%" }, { label: "기본주소", width: "100%" }, { label: "상세주소", width: "80%" }, { label: "참고항목", width: "20%" }, { label: "품목명", width: "100%" }] as 선택항목, 인덱스}
-                <div class="col" style="--flex-basis: {선택항목.width}">
-                  <div><label for={선택항목.label} class="label block">{선택항목.label}</label></div>
+                <div class="app_col" style="--flex-basis: {선택항목.width}">
+                  <div><label for={선택항목.label} class="app_label block">{선택항목.label}</label></div>
                   <select name={선택항목.label} id={선택항목.label} bind:value={엑셀양식[인덱스]}>
                     <option value={-1}>없음</option>
                     {#each 엑셀데이터[엑셀제목줄] as 제목, 인덱스}
@@ -733,7 +733,7 @@
                   </select>
                 </div>
               {/each}
-              <div class="col" style="--flex-basis: 100%; padding-top: 1em; display: flex; gap: 1em;"><button type="button" onclick={() => 엑셀자료입력()}>교체</button><button type="button" onclick={() => 엑셀자료입력(true)}>추가</button></div>
+              <div class="app_col" style="--flex-basis: 100%; padding-top: 1em; display: flex; gap: 1em;"><button type="button" onclick={() => 엑셀자료입력()}>교체</button><button type="button" onclick={() => 엑셀자료입력(true)}>추가</button></div>
             </div>
           {/if}
         </div>
@@ -747,7 +747,7 @@
     display: block;
   }
 
-  .label {
+  .app_label {
     font-weight: bolder;
     margin: 0.5em 0;
   }
@@ -774,17 +774,17 @@
     gap: 1em;
   }
 
-  .body {
+  .app_body {
     padding: 1em;
   }
 
-  .row {
+  .app_row {
     display: flex;
     flex-wrap: wrap;
     column-gap: 1em;
   }
 
-  .row .col {
+  .app_row .app_col {
     flex: 1 1 100%;
     flex-basis: calc(var(--flex-basis) - 1em);
   }
@@ -878,7 +878,7 @@
     flex-grow: 1;
   }
   @media screen and (max-width: 512px) {
-    .row .col {
+    .app_row .app_col {
       flex-basis: 100%;
     }
   }
