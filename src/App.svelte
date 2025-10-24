@@ -2,6 +2,7 @@
   import { onDestroy, onMount, tick } from "svelte";
   import { fade, fly } from "svelte/transition";
   import { parseExcelWithWorker } from "./lib/parseExcel";
+  import type Swal from "sweetalert2";
 
   type 배송형태종류타입 = (typeof 배송형태종류)[number];
 
@@ -24,6 +25,7 @@
     qty: number | undefined;
     margin: number | undefined;
     total_dome: number | undefined;
+    soldout: boolean;
   };
 
   type 배송정보타입 = {
@@ -42,40 +44,53 @@
   };
 
   type 개별품목정보 = {
-    brand: string | null;
-    brand_kor: string | null;
-    PROD_CD: string | null;
-    product: string | null;
-    carton: string | null;
-    price: string | null;
-    software: string | null;
-    bypass_soldout: string | null;
-    soldout: string | null;
-    fixed_stock: string | null;
-    custom_option: string | null;
-    add_date: string | null;
-    whitelist_user: string | null;
-    blacklist_user: string | null;
-    zerostock: number | null;
-    stock_level: number | null;
+    brand: string | undefined;
+    brand_kor: string | undefined;
+    PROD_CD: string | undefined;
+    product: string | undefined;
+    carton: string | undefined;
+    price: string | undefined;
+    software: string | undefined;
+    bypass_soldout: string | undefined;
+    soldout: string | undefined;
+    fixed_stock: string | undefined;
+    custom_option: string | undefined;
+    add_date: string | undefined;
+    whitelist_user: string | undefined;
+    blacklist_user: string | undefined;
+    zerostock: number | undefined;
+    stock_level: number | undefined;
   };
 
   type 임시배열타입 = {
-    product: string;
-    brand: string;
+    product: string | undefined;
+    brand: string | undefined;
+    soldout: number | undefined;
+  };
+
+  type 선택상자호출자타입 = {
+    요소: HTMLElement | undefined;
+    인덱스: number;
+    품목: 품목리스트항목타입 | undefined;
+    유형: string | null | undefined;
   };
 
   let 선택상자열림 = $state(false);
-  let 선택상자항목: string[] | 임시배열타입[] = $state([]);
+  let 선택상자항목: 임시배열타입[] = $state([]);
   let 선택상자요소배열: HTMLElement[] = $state([]);
   let 선택상자: HTMLElement | undefined = $state();
-  let 선택상자호출자: any[] = $state([]);
+  let 선택상자호출자: 선택상자호출자타입 = $state({
+    요소: undefined,
+    인덱스: -1,
+    품목: undefined,
+    유형: undefined,
+  });
   let 선택상자선택항목: number = $state(-1);
 
-  let 우편번호검색열림 = $state(false);
-  let 우편번호검색상자: HTMLElement | undefined = $state();
+  let 우편번호검색열림: Record<string, boolean> = $state({});
+  let 우편번호검색상자: Record<string, HTMLElement> = $state({});
   let 우편번호검색호출인덱스 = $state(-1);
-  let 우편번호상세입력란: HTMLElement[] = $state([]);
+  let 우편번호상세입력란: Record<string, HTMLElement> = $state({});
 
   let 엑셀파일선택: HTMLInputElement | undefined = $state();
   let 엑셀로딩: boolean = $state(false);
@@ -85,7 +100,7 @@
   let 엑셀양식 = $state([]);
   $inspect(엑셀양식);
 
-  let 품목명입력란: HTMLElement[] = $state([]);
+  let 품목명입력란: Record<string, HTMLElement> = $state({});
 
   let 컨테이너 = $state();
 
@@ -110,10 +125,9 @@
 
     const 요소 = e.currentTarget as HTMLInputElement;
     const 값 = 요소.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+    const 숫자값 = Number(값) || 0;
 
-    const 복제된품목리스트 = [...$state.snapshot(품목리스트)];
-
-    const 인덱스 = 복제된품목리스트.findIndex(요소 => 요소.uuid == 품목.uuid);
+    const 인덱스 = 품목리스트.findIndex(요소 => 요소.uuid == 품목.uuid);
 
     if (인덱스 == -1) return;
 
@@ -127,47 +141,49 @@
 
     switch (필드) {
       case "소비자가":
-        복제된품목리스트[인덱스].productInfo.sell_price = Number(값);
-        복제된품목리스트[인덱스].productInfo.dome_price = 계산_도매가(Number(복제된품목리스트[인덱스].productInfo.sell_price), Number(복제된품목리스트[인덱스].productInfo.margin));
+        품목리스트[인덱스].productInfo.sell_price = 숫자값;
+        품목리스트[인덱스].productInfo.dome_price = 계산_도매가(Number(품목리스트[인덱스].productInfo.sell_price), Number(품목리스트[인덱스].productInfo.margin));
         break;
       case "공급단가":
-        복제된품목리스트[인덱스].productInfo.dome_price = Number(값);
-        복제된품목리스트[인덱스].productInfo.margin = 계산_마진(Number(복제된품목리스트[인덱스].productInfo.dome_price), Number(복제된품목리스트[인덱스].productInfo.sell_price));
+        품목리스트[인덱스].productInfo.dome_price = 숫자값;
+        품목리스트[인덱스].productInfo.margin = 계산_마진(Number(품목리스트[인덱스].productInfo.dome_price), Number(품목리스트[인덱스].productInfo.sell_price));
         break;
       case "마진":
-        복제된품목리스트[인덱스].productInfo.margin = Number(값);
-        복제된품목리스트[인덱스].productInfo.dome_price = 계산_도매가(Number(복제된품목리스트[인덱스].productInfo.sell_price), Number(복제된품목리스트[인덱스].productInfo.margin));
+        품목리스트[인덱스].productInfo.margin = 숫자값;
+        품목리스트[인덱스].productInfo.dome_price = 계산_도매가(Number(품목리스트[인덱스].productInfo.sell_price), Number(품목리스트[인덱스].productInfo.margin));
         break;
       case "수량":
         요소.value = 요소.value.replace(/[^0-9]/g, "");
-        복제된품목리스트[인덱스].productInfo.qty = Math.floor(Number(값));
+        품목리스트[인덱스].productInfo.qty = Math.floor(숫자값);
     }
-    복제된품목리스트[인덱스].productInfo.total_dome = Number(복제된품목리스트[인덱스].productInfo.dome_price) * Number(복제된품목리스트[인덱스].productInfo.qty);
-
-    품목리스트 = 복제된품목리스트;
+    품목리스트[인덱스].productInfo.total_dome = Number(품목리스트[인덱스].productInfo.dome_price) * Number(품목리스트[인덱스].productInfo.qty);
   }
 
   const isHTMLElement = (element: any) => element instanceof HTMLElement || element instanceof HTMLInputElement;
 
-  async function 선택상자열기(품목: 품목리스트항목타입, 유형: string, 요소: HTMLElement, 인덱스: number, 브랜드: string | undefined = undefined) {
+  function 선택상자열기(품목: 품목리스트항목타입, 유형: string, 요소: HTMLElement, 인덱스: number, 브랜드: string | undefined = undefined) {
     window.removeEventListener("click", 선택상자닫기);
     요소.removeEventListener("input", 선택상자검색);
     요소.removeEventListener("keydown", 선택상자검색항목선택);
-    선택상자호출자 = [];
-    선택상자호출자 = [요소, 인덱스];
+    선택상자호출자 = {
+      요소,
+      인덱스,
+      품목,
+      유형,
+    };
     선택상자항목.length = 0;
     if (유형 == "브랜드") {
-      선택상자항목 = Object.keys(전체품목);
-      선택상자호출자.push(품목, "brand");
+      선택상자항목 = Object.keys(전체품목).map(x => ({ brand: x, product: undefined, soldout: undefined }));
     } else if (유형 == "품목명" && 브랜드) {
       const key = String(브랜드);
       const items = (전체품목 as 전체품목리스트)[key];
       if (Array.isArray(items)) {
-        선택상자항목 = items.map((x: 개별품목정보) => x.product ?? "");
+        선택상자항목 = items.map((x: 개별품목정보): 임시배열타입 => {
+          return { brand: x.brand, product: x.product ?? "", soldout: x.zerostock };
+        });
       } else {
         선택상자항목 = [];
       }
-      선택상자호출자.push(품목, "product");
     } else {
       let 임시배열: any[] = [];
       Object.keys(전체품목).forEach(각브랜드 => {
@@ -176,20 +192,18 @@
           임시배열 = [
             ...임시배열,
             ...items.map((x: 개별품목정보) => {
-              return { brand: x.brand, product: x.product ?? "" };
+              return { brand: x.brand, product: x.product ?? "", soldout: x.zerostock };
             }),
           ];
           선택상자항목 = 임시배열;
-          선택상자호출자.push(품목, "product");
         }
       });
     }
 
     if (유형) {
-      if (!선택상자호출자.length) return;
       선택상자조정();
       선택상자열림 = true;
-      선택상자선택항목 = 선택상자항목.findIndex(x => x == (요소 as HTMLInputElement).value);
+      선택상자선택항목 = 선택상자항목.findIndex(x => x.product == (요소 as HTMLInputElement).value || x.brand == (요소 as HTMLInputElement).value);
       window.addEventListener("click", 선택상자닫기);
       요소.addEventListener("input", 선택상자검색);
       요소.addEventListener("keydown", 선택상자검색항목선택);
@@ -199,38 +213,39 @@
   function 선택상자검색항목선택(e: KeyboardEvent) {
     if (e.key == "Enter") {
       e.preventDefault();
+      if (!(선택상자호출자.품목 && 선택상자호출자.요소)) return;
       if (선택상자선택항목 >= 0) {
         선택상자요소배열[선택상자선택항목].click();
       } else {
-        선택상자호출자[2].productInfo.sell_price = 0;
-        선택상자호출자[2].productInfo.PROD_CD = "etc_001";
+        선택상자호출자.품목.productInfo.sell_price = 0;
+        선택상자호출자.품목.productInfo.PROD_CD = "etc_001";
         선택상자열림 = false;
       }
-      선택상자호출자[0].blur();
+      선택상자호출자.요소.blur();
     }
   }
 
   function 선택상자검색(e: Event) {
-    const 검색된항목 = 선택상자항목.findIndex((x: string | { [key: string]: string }) => {
-      if (typeof x == "string") {
-        return x.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase());
+    const 검색된항목 = 선택상자항목.findIndex((x: 임시배열타입) => {
+      if (선택상자호출자.품목) {
+        return x.brand?.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase());
       } else {
-        return x.product.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase());
+        return x.product?.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase());
       }
     });
     선택상자선택항목 = 검색된항목;
   }
 
   function 선택상자닫기(e: Event) {
-    if (!((isHTMLElement(e.target) && isHTMLElement(선택상자) && 선택상자.contains(e.target)) || (isHTMLElement(선택상자호출자[0]) && isHTMLElement(e.target) && 선택상자호출자[0].contains(e.target)))) {
+    if (!((isHTMLElement(e.target) && isHTMLElement(선택상자) && 선택상자.contains(e.target)) || (isHTMLElement(선택상자호출자.요소) && isHTMLElement(e.target) && 선택상자호출자.요소.contains(e.target)))) {
       선택상자열림 = false;
       window.removeEventListener("click", 선택상자닫기);
     }
   }
 
   function 선택상자조정() {
-    if (!(선택상자호출자.length && 컨테이너 && isHTMLElement(컨테이너))) return;
-    const 호출자속성 = 선택상자호출자[0].getBoundingClientRect();
+    if (!(선택상자호출자.요소 && 컨테이너 && isHTMLElement(컨테이너))) return;
+    const 호출자속성 = 선택상자호출자.요소.getBoundingClientRect();
     컨테이너.style.setProperty("--selectbox_top", String(호출자속성.bottom));
     컨테이너.style.setProperty("--selectbox_left", String(호출자속성.left));
     컨테이너.style.setProperty("--selectbox_width", String(Math.max(호출자속성.width, 200)));
@@ -261,6 +276,7 @@
               qty: 0,
               margin: 0,
               total_dome: 0,
+              soldout: false,
             },
             deliveryInfo: {
               name: undefined,
@@ -276,9 +292,8 @@
     ];
   }
 
-  async function 우편번호검색(e: Event, 품목: 품목리스트항목타입, 인덱스: number) {
-    우편번호검색호출인덱스 = 인덱스;
-    우편번호검색열림 = true;
+  async function 우편번호검색(품목: 품목리스트항목타입) {
+    우편번호검색열림[품목.uuid] = true;
     await tick();
 
     //@ts-ignore
@@ -310,17 +325,17 @@
         품목.deliveryInfo.postcode = data.zonecode;
         품목.deliveryInfo.addr1 = addr;
 
-        우편번호검색열림 = false;
-        우편번호상세입력란[인덱스].focus();
+        우편번호검색열림[품목.uuid] = false;
+        우편번호상세입력란[품목.uuid].focus();
       },
       onresize: (size: any) => {
-        if (!우편번호검색상자) return;
-        우편번호검색상자.style.height = size.height + "px";
+        if (!우편번호검색상자[품목.uuid]) return;
+        우편번호검색상자[품목.uuid].style.height = size.height + "px";
       },
       width: "100%",
       height: "100%",
       maxSuggestItems: 5,
-    }).embed(우편번호검색상자);
+    }).embed(우편번호검색상자[품목.uuid]);
   }
 
   async function 엑셀파싱(e: Event) {
@@ -369,6 +384,7 @@
           prop: "",
           useprop: false,
           itemType: "0",
+          soldout: false,
         },
         deliveryInfo: {
           name: 줄[고객명],
@@ -397,19 +413,27 @@
   }
 
   onMount(async () => {
-    const 품목가져오기 = await fetch("https://b2b.soundcat.com/page/get_products.php", {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      method: "POST",
-      body: JSON.stringify({
-        key: "b2b_write",
-      }),
-    });
+    try {
+      const 품목가져오기 = await fetch("https://b2b.soundcat.com/page/get_products.php", {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        body: JSON.stringify({
+          key: "b2b_write",
+        }),
+      });
 
-    if (품목가져오기.ok) {
+      if (!품목가져오기.ok) {
+        throw new Error(`서버 응답 오류: ${품목가져오기.status}`);
+      }
+
       전체품목 = await 품목가져오기.json();
+    } catch (err) {
+      console.error("품목 로딩 실패:", err);
+      alert("오류가 발생하여 전체 품목 리스트를 가져오지 못했습니다. 품목을 수동으로 입력하여 작성이 가능합니다.");
     }
+
     let 배송형태셀렉터: HTMLSelectElement | null = document.querySelector("#ex_1");
     const 초기값 = (배송형태셀렉터 as HTMLSelectElement).value;
 
@@ -450,8 +474,7 @@
         {@attach node => {
           node.scrollIntoView({ block: "nearest" });
         }}
-        transition:fly={{ y: -10, duration: 100 }}
-      >
+        transition:fly={{ y: -10, duration: 100 }}>
         <div class="app_header">
           <button type="button" class="arcodian" onclick={() => (품목.collapsed = !품목.collapsed)}>{품목.collapsed ? "►" : "▼"}</button>
           <span><strong>품목{인덱스 + 1}</strong></span>
@@ -491,19 +514,18 @@
                   <div><label for="id_{인덱스}_hp2" class="label block">전화번호2</label></div>
                   <input type="text" id="id_{인덱스}_hp2" bind:value={품목.deliveryInfo.hp2} />
                 </div>
-                <div class="col" style="--flex-basis: 100%;"><div class="label block"><span style="margin-right: 0.5em">주소</span><button type="button" onclick={e => 우편번호검색(e, 품목, 인덱스)}>주소 검색</button></div></div>
-                {#if 우편번호검색호출인덱스 == 인덱스 && 우편번호검색열림}
+                <div class="col" style="--flex-basis: 100%;"><div class="label block"><span style="margin-right: 0.5em">주소</span><button type="button" onclick={e => 우편번호검색(품목)}>주소 검색</button></div></div>
+                {#if 우편번호검색열림[품목.uuid]}
                   <div class="postcodebox col" style="--flex-basis: 100%" transition:fly={{ y: -10, duration: 100 }}>
                     <div class="app_header">
                       우편번호검색
                       <button
                         type="button"
                         onclick={() => {
-                          우편번호검색열림 = false;
-                        }}>닫기</button
-                      >
+                          우편번호검색열림[품목.uuid] = false;
+                        }}>닫기</button>
                     </div>
-                    <div class="body" bind:this={우편번호검색상자}></div>
+                    <div class="body" bind:this={우편번호검색상자[품목.uuid]}></div>
                   </div>
                 {/if}
                 <div class="col" style="--flex-basis: 50%">
@@ -516,7 +538,7 @@
                   <input type="text" placeholder="기본주소" bind:value={품목.deliveryInfo.addr1} />
                 </div>
                 <div class="col" style="--flex-basis: 50%">
-                  <input bind:this={우편번호상세입력란[인덱스]} type="text" placeholder="상세주소" bind:value={품목.deliveryInfo.addr2} />
+                  <input bind:this={우편번호상세입력란[품목.uuid]} type="text" placeholder="상세주소" bind:value={품목.deliveryInfo.addr2} />
                 </div>
                 <div class="col" style="--flex-basis: 50%">
                   <input type="text" placeholder="참고항목" bind:value={품목.deliveryInfo.addr3} />
@@ -529,30 +551,30 @@
                 <div><label for="id_{인덱스}_brand" class="label block">브랜드</label></div>
                 <input
                   type="text"
+                  placeholder="브랜드"
                   id="id_{인덱스}_brand"
                   bind:value={품목.productInfo.brand}
                   onfocus={e => 선택상자열기(품목, "브랜드", e.currentTarget, 인덱스)}
                   onblur={e => {
                     e.currentTarget.removeEventListener("input", 선택상자검색);
                     e.currentTarget.removeEventListener("keydown", 선택상자검색항목선택);
-                  }}
-                />
+                  }} />
               </div>
-              <div class="col" style="--flex-basis: {품목.productInfo.useprop ? '40' : '80'}%;">
-                <div><label for="id_{인덱스}_product" class="label block">품목명</label></div>
+              <div class="col" style="--flex-basis: {품목.productInfo.useprop || 품목.productInfo.PROD_CD == 'etc_001' ? '40' : '80'}%;">
+                <div><label for="id_{인덱스}_product" class="label block">품목명 <span style="font-weight:normal; font-size: 0.9em">(찾는 품목이 없는 경우 선택 없이 진행 가능)</span></label></div>
                 <input
                   type="text"
+                  placeholder="브랜드를 선택하지 않아도 품목 선택 가능"
                   id="id_{인덱스}_product"
-                  bind:this={품목명입력란[인덱스]}
+                  bind:this={품목명입력란[품목.uuid]}
                   bind:value={품목.productInfo.product}
                   onfocus={e => 선택상자열기(품목, "품목명", e.currentTarget, 인덱스, 품목.productInfo.brand)}
                   onblur={e => {
                     e.currentTarget.removeEventListener("input", 선택상자검색);
                     e.currentTarget.removeEventListener("keydown", 선택상자검색항목선택);
-                  }}
-                />
+                  }} />
               </div>
-              {#if 품목.productInfo.useprop}
+              {#if 품목.productInfo.useprop || 품목.productInfo.PROD_CD == "etc_001"}
                 <div class="col" style="--flex-basis: 40%;">
                   <div><label for="id_{인덱스}_prop" class="label block">옵션</label></div>
                   <input type="text" id="id_{인덱스}_prop" bind:value={품목.productInfo.prop} />
@@ -570,8 +592,7 @@
                   value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price))}
                   oninput={e => {
                     가격계산(e, 품목, "공급단가");
-                  }}
-                />
+                  }} />
               </div>
               <div class="col" style="--flex-basis: 10%;">
                 <div><label for="id_{인덱스}_qty" class="label block">수량</label></div>
@@ -581,8 +602,7 @@
                   value={new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty)))}
                   oninput={e => {
                     가격계산(e, 품목, "수량");
-                  }}
-                />
+                  }} />
               </div>
               <div class="col" style="--flex-basis: 10%;">
                 <div><label for="id_{인덱스}_margin" class="label block">마진(%)</label></div>
@@ -592,8 +612,7 @@
                   value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin))}
                   oninput={e => {
                     가격계산(e, 품목, "마진");
-                  }}
-                />
+                  }} />
               </div>
               <div class="col" style="--flex-basis: 40%;">
                 <div><label for="id_{인덱스}_total_dome" class="label block">공급합계</label></div>
@@ -617,8 +636,7 @@
           품목리스트.reduce((val, x) => {
             return val + (x.productInfo.total_dome ?? 0);
           }, 0)
-        )}
-      />
+        )} />
     </div>
     <div class="gap">&nbsp;</div>
     <div><button type="button" onclick={() => 엑셀파일선택?.click()}>엑셀자료 불러오기</button><input hidden type="file" accept=".xlsx,.xls" bind:this={엑셀파일선택} onchange={엑셀파싱} /></div>
@@ -632,47 +650,45 @@
               type="button"
               class:searched={선택상자선택항목 == 인덱스}
               onclick={() => {
-                let 새선택항목 = 선택항목;
-                if (typeof 선택항목 != "string") 새선택항목 = 선택항목.product;
-                if (isHTMLElement(선택상자호출자[0])) {
-                  if (선택상자호출자[0] instanceof HTMLInputElement && typeof 새선택항목 == "string") 선택상자호출자[0].value = 새선택항목;
-                  if (선택상자호출자[3] == "brand" && 선택상자호출자[2].productInfo.brand != 새선택항목) {
-                    선택상자호출자[2].productInfo.product = "";
-                    선택상자호출자[2].productInfo.PROD_CD = "";
-                    선택상자호출자[2].productInfo.sell_price = "";
-                    선택상자호출자[2].productInfo.dome_price = "";
-                    선택상자호출자[2].productInfo.total_dome = "";
-                    선택상자호출자[2].productInfo.useprop = false;
-                  }
+                if (isHTMLElement(선택상자호출자.요소) && 선택상자호출자.품목) {
+                  if (선택상자호출자.유형 == "브랜드") {
+                    선택상자호출자.품목.productInfo.product = "";
+                    선택상자호출자.품목.productInfo.PROD_CD = "";
+                    선택상자호출자.품목.productInfo.sell_price = 0;
+                    선택상자호출자.품목.productInfo.dome_price = 0;
+                    선택상자호출자.품목.productInfo.total_dome = 0;
+                    선택상자호출자.품목.productInfo.useprop = false;
+                    선택상자호출자.품목.productInfo.soldout = false;
+                    if (선택상자호출자.요소 instanceof HTMLInputElement) 선택상자호출자.요소.value = 선택항목.brand ?? "";
 
-                  선택상자호출자[2].productInfo[선택상자호출자[3]] = 새선택항목;
+                    const uuid = 선택상자호출자.품목.uuid;
+                    if (uuid) setTimeout(() => 품목명입력란[uuid]?.focus(), 100);
+                  } else if (선택상자호출자.유형 == "품목명") {
+                    선택상자호출자.품목.productInfo.brand = 선택항목.brand;
+                    선택상자호출자.품목.productInfo.product = 선택항목.product;
+                    if (선택상자호출자.요소 instanceof HTMLInputElement) 선택상자호출자.요소.value = 선택항목.product ?? "";
+                    if (!선택상자호출자.품목.productInfo.brand) return;
+                    const 인덱스 = 전체품목[선택상자호출자.품목.productInfo.brand].findIndex(x => x.product == 선택상자호출자.품목?.productInfo.product);
 
-                  if (선택상자호출자[3] == "product") {
-                    if (!선택상자호출자[2].productInfo.brand && typeof 선택항목 != "string") {
-                      선택상자호출자[2].productInfo.brand = 선택항목.brand;
-                    }
-                    const 인덱스 = 전체품목[선택상자호출자[2].productInfo.brand].findIndex(x => x.product == 선택상자호출자[2].productInfo.product);
                     if (인덱스 != -1) {
-                      선택상자호출자[2].productInfo.sell_price = 전체품목[선택상자호출자[2].productInfo.brand][인덱스].price;
-                      if (전체품목[선택상자호출자[2].productInfo.brand][인덱스].custom_option == "1") {
-                        선택상자호출자[2].productInfo.useprop = true;
+                      선택상자호출자.품목.productInfo.sell_price = Number(전체품목[선택상자호출자.품목.productInfo.brand][인덱스].price);
+                      if (전체품목[선택상자호출자.품목.productInfo.brand][인덱스].custom_option == "1") {
+                        선택상자호출자.품목.productInfo.useprop = true;
                       } else {
-                        선택상자호출자[2].productInfo.useprop = false;
+                        선택상자호출자.품목.productInfo.useprop = false;
                       }
+                      선택상자호출자.품목.productInfo.soldout = Boolean(선택항목.soldout);
+                      선택상자호출자.품목.productInfo.dome_price = 선택상자호출자.품목.productInfo.sell_price * ((100 - (선택상자호출자.품목.productInfo.margin ?? 0)) / 100);
+                      선택상자호출자.품목.productInfo.total_dome = 선택상자호출자.품목.productInfo.dome_price * (선택상자호출자.품목.productInfo.qty ?? 0);
+                      선택상자호출자.품목.productInfo.PROD_CD = 전체품목[선택상자호출자.품목.productInfo.brand][인덱스].PROD_CD;
                     }
-                    선택상자호출자[2].productInfo.dome_price = 선택상자호출자[2].productInfo.sell_price * ((100 - 선택상자호출자[2].productInfo.margin) / 100);
-                    선택상자호출자[2].productInfo.total_dome = 선택상자호출자[2].productInfo.dome_price * 선택상자호출자[2].productInfo.qty;
-                    선택상자호출자[2].productInfo.PROD_CD = 전체품목[선택상자호출자[2].productInfo.brand][인덱스].PROD_CD;
                   }
+
                   선택상자열림 = false;
-                  if (선택상자호출자[3] == "brand") {
-                    setTimeout(() => 품목명입력란[선택상자호출자[1]].focus(), 100);
-                  }
                 }
               }}
-              bind:this={선택상자요소배열[인덱스]}
-            >
-              {typeof 선택항목 == "string" ? 선택항목 : 선택항목.product}
+              bind:this={선택상자요소배열[인덱스]}>
+              {선택상자호출자.유형 == "브랜드" ? 선택항목.brand : 선택항목.product}{typeof 선택항목 != "string" && 선택항목.soldout ? " (품절)" : ""}
             </button>
           </li>
         {:else}
@@ -693,8 +709,7 @@
             엑셀로딩 = false;
             엑셀데이터 = [];
             엑셀양식 = [];
-          }}>닫기</button
-        >
+          }}>닫기</button>
       </div>
       <div class="body">
         <div class="steps">
