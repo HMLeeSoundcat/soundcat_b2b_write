@@ -70,6 +70,17 @@
       function setDeliveryType(v) {
         document.querySelector("#ex_1").value = v;
       }
+
+      function getExistingData () {
+        const data = `[{"uuid":"175e0a7c-ec8a-4cc0-9e77-80af8ef2c281","collapsed":false,"productInfo":{"itemType":0,"useprop":false,"sell_price":0,"dome_price":0,"qty":0,"margin":0,"total_dome":0,"soldout":false},"deliveryInfo":{}},{"uuid":"51094377-b4bc-48c6-af7c-f93e9531bac3","collapsed":false,"productInfo":{"itemType":0,"useprop":false,"sell_price":0,"dome_price":0,"qty":0,"margin":0,"total_dome":0,"soldout":false},"deliveryInfo":{}},{"uuid":"95ae3f65-0135-4d40-b298-57538d9d7385","collapsed":false,"productInfo":{"itemType":0,"useprop":false,"sell_price":0,"dome_price":0,"qty":0,"margin":0,"total_dome":0,"soldout":false},"deliveryInfo":{}}]`;
+        try {
+          const jsondata = JSON.parse(data);
+          return jsondata;
+        } catch (err) {
+          console.error(err);
+          return [];
+        }
+      }
     </script>
   </body>
 </html>

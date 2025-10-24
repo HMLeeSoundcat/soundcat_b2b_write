@@ -408,10 +408,13 @@
     }
   }
 
-  function 품목추가(복제: boolean = false) {
+  function 품목추가(옵션: {
+    복제?: boolean,
+    데이터?: 품목리스트항목타입[]
+  } | undefined = undefined) {
     품목리스트 = [
       ...품목리스트,
-      복제
+      옵션 && 옵션.복제
         ? (() => {
             const 원본: 품목리스트항목타입 = 품목리스트[품목리스트.length - 1];
             const 사본: 품목리스트항목타입 = JSON.parse(JSON.stringify(원본));
@@ -678,6 +681,9 @@
       }
       배송형태셀렉터.addEventListener("change", 배송형태변경);
     }
+
+    //@ts-ignore
+    if (window.getExistingData) 품목리스트 = [...품목리스트, ...window.getExistingData()];
 
     if (품목리스트.length === 0) {
       품목추가();
@@ -1041,7 +1047,7 @@
   <div class="app_footer app_row">
     <button
       type="button"
-      onclick={() => 품목추가(true)}>추가</button>
+      onclick={() => 품목추가({복제: true})}>추가</button>
     <div
       class="app_col"
       style="display: flex; align-items:center; justify-content: flex-end;">
