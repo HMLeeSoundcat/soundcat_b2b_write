@@ -14,7 +14,7 @@
   };
 
   type 제품정보타입 = {
-    itemType: "0" | "1" | "2";
+    itemType: 0 | 1 | 2;
     brand: string | undefined;
     product: string | undefined;
     PROD_CD: string | undefined;
@@ -125,6 +125,7 @@
 
     const 요소 = e.currentTarget as HTMLInputElement;
     const 값 = 요소.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+    요소.value = 값;
     const 숫자값 = Number(값) || 0;
 
     const 인덱스 = 품목리스트.findIndex(요소 => 요소.uuid == 품목.uuid);
@@ -142,15 +143,15 @@
     switch (필드) {
       case "소비자가":
         품목리스트[인덱스].productInfo.sell_price = 숫자값;
-        품목리스트[인덱스].productInfo.dome_price = 계산_도매가(Number(품목리스트[인덱스].productInfo.sell_price), Number(품목리스트[인덱스].productInfo.margin));
+        품목리스트[인덱스].productInfo.dome_price = 계산_도매가(숫자값, Number(품목리스트[인덱스].productInfo.margin));
         break;
       case "공급단가":
         품목리스트[인덱스].productInfo.dome_price = 숫자값;
-        품목리스트[인덱스].productInfo.margin = 계산_마진(Number(품목리스트[인덱스].productInfo.dome_price), Number(품목리스트[인덱스].productInfo.sell_price));
+        품목리스트[인덱스].productInfo.margin = 계산_마진(숫자값, Number(품목리스트[인덱스].productInfo.sell_price));
         break;
       case "마진":
         품목리스트[인덱스].productInfo.margin = 숫자값;
-        품목리스트[인덱스].productInfo.dome_price = 계산_도매가(Number(품목리스트[인덱스].productInfo.sell_price), Number(품목리스트[인덱스].productInfo.margin));
+        품목리스트[인덱스].productInfo.dome_price = 계산_도매가(Number(품목리스트[인덱스].productInfo.sell_price), 숫자값);
         break;
       case "수량":
         요소.value = 요소.value.replace(/[^0-9]/g, "");
@@ -265,7 +266,7 @@
             uuid: crypto.randomUUID(),
             collapsed: false,
             productInfo: {
-              itemType: "0",
+              itemType: 0,
               brand: undefined,
               product: undefined,
               PROD_CD: undefined,
@@ -383,7 +384,7 @@
           total_dome: 0,
           prop: "",
           useprop: false,
-          itemType: "0",
+          itemType: 0,
           soldout: false,
         },
         deliveryInfo: {
@@ -479,18 +480,18 @@
           <button type="button" class="arcodian" onclick={() => (품목.collapsed = !품목.collapsed)}>{품목.collapsed ? "►" : "▼"}</button>
           <span><strong>품목{인덱스 + 1}</strong></span>
           <div class="radio_vertical">
-            <div class="app_radio">
-              <input type="radio" id="id_{인덱스}_itemType1" name="itemType_{인덱스}" value="0" bind:group={품목.productInfo.itemType} />
-              <label class="app_label" for="id_{인덱스}_itemType1">일반</label>
-            </div>
-            <div class="app_radio">
-              <input type="radio" id="id_{인덱스}_itemType2" name="itemType_{인덱스}" value="1" bind:group={품목.productInfo.itemType} />
-              <label class="app_label" for="id_{인덱스}_itemType2">데모(40%)</label>
-            </div>
-            <div class="app_radio">
-              <input type="radio" id="id_{인덱스}_itemType3" name="itemType_{인덱스}" value="2" bind:group={품목.productInfo.itemType} />
-              <label class="app_label" for="id_{인덱스}_itemType3">데모(50%)</label>
-            </div>
+            <label class="app_radio">
+              <input type="radio" id="id_{인덱스}_itemType1" name="itemType_{인덱스}" value={0} bind:group={품목.productInfo.itemType} />
+              <span>일반</span>
+            </label>
+            <label class="app_radio">
+              <input type="radio" id="id_{인덱스}_itemType2" name="itemType_{인덱스}" value={1} bind:group={품목.productInfo.itemType} />
+              <span>데모(40%)</span>
+            </label>
+            <label class="app_radio">
+              <input type="radio" id="id_{인덱스}_itemType3" name="itemType_{인덱스}" value={2} bind:group={품목.productInfo.itemType} />
+              <span>데모(50%)</span>
+            </label>
           </div>
           <div class="action">
             {#if 품목리스트.length > 1}
@@ -779,6 +780,54 @@
     gap: 1em;
   }
 
+  .app_radio {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    font-weight: bolder;
+  }
+  .app_radio span {
+    margin-top: auto;
+  }
+
+  .app_radio input[type="radio"] {
+    width: 0;
+    height: 0;
+  }
+  .app_radio:has(input[type="radio"])::before {
+    content: "";
+    border-radius: 999px;
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid #0002;
+    background: white;
+    transition: 0.1s;
+  }
+  .app_radio:has(input[type="radio"]):hover::before {
+    border-color: #0004;
+  }
+  .app_radio:has(input[type="radio"]):active::before {
+    transition: 0s;
+    background: #0002;
+  }
+  .app_radio:has(input[type="radio"]:checked)::before {
+    border-color: rgb(0, 109, 211);
+  }
+
+  .app_radio:has(input[type="radio"])::after {
+    content: "";
+    border-radius: 999px;
+    width: calc(1em - 4px);
+    height: calc(1em - 4px);
+    position: absolute;
+    left: 4px;
+    transition: 0.1s;
+  }
+  .app_radio:has(input[type="radio"]:checked)::after {
+    background: rgb(0, 109, 211);
+  }
+
   .app_body {
     padding: 1em;
   }
@@ -883,11 +932,6 @@
   .gap {
     flex-grow: 1;
   }
-  @media screen and (max-width: 512px) {
-    .app_row .app_col {
-      flex-basis: 100%;
-    }
-  }
 
   .excelLoading {
     position: relative;
@@ -932,5 +976,10 @@
   }
   .excelWindow select {
     width: 100%;
+  }
+  @media screen and (max-width: 512px) {
+    .app_row .app_col {
+      flex-basis: 100%;
+    }
   }
 </style>
