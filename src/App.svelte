@@ -1,8 +1,12 @@
+<script module>
+  declare const Swal: typeof SwalType;
+</script>
+
 <script lang="ts">
   import { onDestroy, onMount, tick } from "svelte";
   import { fade, fly } from "svelte/transition";
   import { parseExcelWithWorker } from "./lib/parseExcel";
-  import type Swal from "sweetalert2";
+  import type SwalType from "sweetalert2";
 
   type 배송형태종류타입 = (typeof 배송형태종류)[number];
 
@@ -89,8 +93,20 @@
 
   let 우편번호검색열림: Record<string, boolean> = $state({});
   let 우편번호검색상자: Record<string, HTMLElement> = $state({});
-  let 우편번호검색호출인덱스 = $state(-1);
   let 우편번호상세입력란: Record<string, HTMLElement> = $state({});
+
+  let 기본주소:
+    | {
+        name: string;
+        hp1: string;
+        hp2: string;
+        postcode: string;
+        addr1: string;
+        addr2: string;
+        addr3: string;
+      }
+    | null
+    | undefined = $state();
 
   let 엑셀파일선택: HTMLInputElement | undefined = $state();
   let 엑셀로딩: boolean = $state(false);
@@ -98,7 +114,6 @@
   let 엑셀데이터선택창: boolean = $state(false);
   let 엑셀제목줄 = $state(-1);
   let 엑셀양식 = $state([]);
-  $inspect(엑셀양식);
 
   let 품목명입력란: Record<string, HTMLElement> = $state({});
 
@@ -110,7 +125,6 @@
   let 배송형태: 배송형태종류타입 | undefined = $state();
 
   let 품목리스트: 품목리스트항목타입[] = $state([]);
-  $inspect(전체품목);
 
   function 배송형태변경(e: Event) {
     const 값 = (e.target as HTMLSelectElement).value;
@@ -293,6 +307,74 @@
     ];
   }
 
+  async function 품절팝업() {
+    let timerTimer: number;
+    let timerTimerTimer: number;
+    let dialog: HTMLElement | null;
+    let dangerbtn: HTMLButtonElement | null | undefined;
+
+    const swalpopup = await Swal.fire({
+      title: "품절 안내",
+      html: `<p>해당 제품은 현재 [품절]입니다.</p></br><p>품절된 품목이 있어도 발주서 작성은 가능하지만<br /><strong>출고가 불가능</strong>한 점 참고 바랍니다.</p><p><strong style="color:red">(재고 부족으로 인해 출고가 불가능한 경우<br><u>별도 안내 없이 [취소]처리</u>됩니다.)</strong></p></br><p>재고 입고 일정 등 확인이 필요하실 경우<br />영업 담당자에게 문의 주시기 바랍니다.</p></br><p style='color: red'>담당자 확인 후 발주 진행하시는 경우에는 무관하며,</br><strong>다른 품목을 선택하여 혼동이 발생하지 않도록 주의 바랍니다.</br></strong></p></br><p>선오더로 발주하려면 <strong>'선오더로 변경'</strong>을 선택하세요.</p>`,
+      confirmButtonColor: "#FDAB29",
+      icon: "warning",
+      confirmButtonText: "선오더로 변경",
+      showCancelButton: true,
+      cancelButtonText: "계속 진행",
+      showDenyButton: true,
+      denyButtonText: "다시 입력",
+      focusDeny: true,
+      allowOutsideClick: () => {
+        const popup = Swal.getPopup();
+        if (!popup) return false;
+        popup.classList.remove("animate__animated", "animate__fadeInDown", "animate__faster", "swal2-show");
+        setTimeout(() => {
+          popup.classList.add("animate__animated", "animate__headShake");
+        });
+        setTimeout(() => {
+          popup.classList.remove("animate__animated", "animate__headShake");
+        }, 500);
+        return false;
+      },
+      willOpen: () => {
+        dialog = document.querySelector(".soldoutDialog");
+        dangerbtn = dialog?.querySelector(".btn-danger-hold");
+        if (dialog && dangerbtn) {
+          dangerbtn.disabled = true;
+          dangerbtn.innerText = "계속 진행(10)";
+        }
+      },
+      didOpen: () => {
+        var timer = 9;
+        timerTimer = setInterval(() => {
+          if (dialog && dangerbtn) dangerbtn.innerText = `계속 진행(${timer})`;
+          timer--;
+        }, 1000);
+        timerTimerTimer = setTimeout(() => {
+          if (dialog && dangerbtn) {
+            dangerbtn.disabled = false;
+            dangerbtn.innerText = "계속 진행";
+            clearInterval(timerTimer);
+          }
+        }, 10000);
+      },
+      didClose: () => {
+        clearInterval(timerTimer);
+        clearTimeout(timerTimerTimer);
+      },
+      customClass: {
+        container: "soldoutDialog",
+        confirmButton: "order-1",
+        cancelButton: "btn-danger-hold order-2",
+        denyButton: "order-3",
+      },
+    });
+
+    return new Promise((resolve, reject) => {
+      resolve(swalpopup);
+    });
+  }
+
   async function 우편번호검색(품목: 품목리스트항목타입) {
     우편번호검색열림[품목.uuid] = true;
     await tick();
@@ -436,18 +518,21 @@
     }
 
     let 배송형태셀렉터: HTMLSelectElement | null = document.querySelector("#ex_1");
-    const 초기값 = (배송형태셀렉터 as HTMLSelectElement).value;
-
-    if (배송형태종류.includes(초기값 as any)) {
-      배송형태 = 초기값 as 배송형태종류타입;
-    }
     if (배송형태셀렉터) {
+      const 초기값 = 배송형태셀렉터.value;
+
+      if (배송형태종류.includes(초기값 as any)) {
+        배송형태 = 초기값 as 배송형태종류타입;
+      }
       배송형태셀렉터.addEventListener("change", 배송형태변경);
     }
 
     if (품목리스트.length === 0) {
       품목추가();
     }
+
+    //@ts-ignore
+    if (window.getDefaultAddr) 기본주소 = window.getDefaultAddr();
   });
 
   onDestroy(() => {
@@ -462,7 +547,7 @@
   });
   $effect(() => {
     //@ts-ignore
-    if (품목리스트) window.setData(품목리스트);
+    if (품목리스트 && window.setData) window.setData(품목리스트);
   });
 </script>
 
@@ -477,7 +562,7 @@
         }}
         transition:fly={{ y: -10, duration: 100 }}>
         <div class="app_header">
-          <button type="button" class="arcodian" onclick={() => (품목.collapsed = !품목.collapsed)}>{품목.collapsed ? "►" : "▼"}</button>
+          <button type="button" class="arcodian" onclick={() => (품목.collapsed = !품목.collapsed)} aria-label="품목 접기/펼치기" title="품목 접기/펼치기">{@html 품목.collapsed ? `<i class="fa-solid fa-chevron-right"></i>` : `<i class="fa-solid fa-chevron-down"></i>`}</button>
           <span><strong>품목{인덱스 + 1}</strong></span>
           <div class="radio_vertical">
             <label class="app_radio">
@@ -650,7 +735,7 @@
             <button
               type="button"
               class:searched={선택상자선택항목 == 인덱스}
-              onclick={() => {
+              onclick={async () => {
                 if (isHTMLElement(선택상자호출자.요소) && 선택상자호출자.품목) {
                   if (선택상자호출자.유형 == "브랜드") {
                     선택상자호출자.품목.productInfo.product = "";
@@ -665,6 +750,24 @@
                     const uuid = 선택상자호출자.품목.uuid;
                     if (uuid) setTimeout(() => 품목명입력란[uuid]?.focus(), 100);
                   } else if (선택상자호출자.유형 == "품목명") {
+                    if (선택항목.soldout) {
+                      const 품절팝업결과 = (await 품절팝업()) as { isConfirmed: any; isDenied: any; dismiss: any };
+                      if (품절팝업결과.isDenied) {
+                        선택상자호출자.품목.productInfo.product = "";
+                        선택상자호출자.품목.productInfo.PROD_CD = "";
+                        선택상자호출자.품목.productInfo.sell_price = 0;
+                        선택상자호출자.품목.productInfo.dome_price = 0;
+                        선택상자호출자.품목.productInfo.total_dome = 0;
+                        선택상자호출자.품목.productInfo.useprop = false;
+                        선택상자호출자.품목.productInfo.soldout = false;
+                        return;
+                      }
+
+                      if (품절팝업결과.isConfirmed) {
+                        //@ts-ignore
+                        if (window.setOrderType) window.setOrderType("선오더");
+                      }
+                    }
                     선택상자호출자.품목.productInfo.brand = 선택항목.brand;
                     선택상자호출자.품목.productInfo.product = 선택항목.product;
                     if (선택상자호출자.요소 instanceof HTMLInputElement) 선택상자호출자.요소.value = 선택항목.product ?? "";
@@ -744,6 +847,10 @@
 {/if}
 
 <style>
+  :global(.soldoutDialog p) {
+    margin: 0;
+    margin-bottom: 1em;
+  }
   .block {
     display: block;
   }
@@ -910,7 +1017,6 @@
     flex-direction: row-reverse;
     align-items: center;
     margin-top: 1em;
-    margin-bottom: 300px;
     gap: 1em;
   }
 
