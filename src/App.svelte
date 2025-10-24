@@ -516,7 +516,7 @@
                 </div>
                 <div class="app_col" style="--flex-basis: 100%;"><div class="app_label block"><span style="margin-right: 0.5em">주소</span><button type="button" onclick={e => 우편번호검색(품목)}>주소 검색</button></div></div>
                 {#if 우편번호검색열림[품목.uuid]}
-                  <div class="postcodebox col" style="--flex-basis: 100%" transition:fly={{ y: -10, duration: 100 }}>
+                  <div class="postcodebox app_col" style="--flex-basis: 100%" transition:fly={{ y: -10, duration: 100 }}>
                     <div class="app_header">
                       우편번호검색
                       <button
@@ -765,6 +765,11 @@
     border-bottom: 1px solid #ddd;
     position: sticky;
     top: 0;
+    z-index: 2;
+  }
+
+  .app_body .app_header {
+    z-index: 1;
   }
 
   .radio_vertical {
@@ -824,6 +829,7 @@
     max-height: 400px;
     overflow-y: auto;
     box-shadow: 0 2px 4px #0002;
+    z-index: 3;
   }
   .select_box ul {
     list-style: none;
@@ -906,6 +912,7 @@
     width: 100%;
     height: 100%;
     background-color: #fff3;
+    z-index: 5;
   }
   .excelWindow .inner {
     background-color: white;
