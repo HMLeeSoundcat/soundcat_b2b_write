@@ -562,7 +562,7 @@
         }}
         transition:fly={{ y: -10, duration: 100 }}>
         <div class="app_header">
-          <button type="button" class="arcodian" onclick={() => (품목.collapsed = !품목.collapsed)} aria-label="품목 접기/펼치기" title="품목 접기/펼치기">{@html 품목.collapsed ? `<i class="fa-solid fa-chevron-right"></i>` : `<i class="fa-solid fa-chevron-down"></i>`}</button>
+          <button type="button" class="arcodian" onclick={() => (품목.collapsed = !품목.collapsed)} aria-label="품목 접기/펼치기" title="품목 접기/펼치기">{@html 품목.collapsed ? `<i class="fas fa-chevron-right"></i>` : `<i class="fas fa-chevron-down"></i>`}</button>
           <span><strong>품목{인덱스 + 1}</strong></span>
           <div class="radio_vertical">
             <label class="app_radio">
@@ -903,6 +903,7 @@
   }
   .app_radio:has(input[type="radio"])::before {
     content: "";
+    box-sizing: content-box;
     border-radius: 999px;
     display: inline-block;
     width: 1em;
@@ -924,6 +925,7 @@
 
   .app_radio:has(input[type="radio"])::after {
     content: "";
+    box-sizing: content-box;
     border-radius: 999px;
     width: calc(1em - 4px);
     height: calc(1em - 4px);
