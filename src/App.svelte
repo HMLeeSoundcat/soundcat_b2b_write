@@ -176,7 +176,7 @@
 
   const isHTMLElement = (element: any) => element instanceof HTMLElement || element instanceof HTMLInputElement;
 
-  function 선택상자열기(품목: 품목리스트항목타입, 유형: string, 요소: HTMLElement, 인덱스: number, 브랜드: string | undefined = undefined) {
+  function 선택상자열기(품목: 품목리스트항목타입, 유형: string, 요소: HTMLElement, 인덱스: number) {
     window.removeEventListener("click", 선택상자닫기);
     요소.removeEventListener("input", 선택상자검색);
     요소.removeEventListener("keydown", 선택상자검색항목선택);
@@ -186,7 +186,10 @@
       품목,
       유형,
     };
-    선택상자항목.length = 0;
+    선택상자항목 = [];
+
+    const 브랜드 = 품목.productInfo.brand;
+
     if (유형 == "브랜드") {
       선택상자항목 = Object.keys(전체품목).map(x => ({ brand: x, product: undefined, soldout: undefined }));
     } else if (유형 == "품목명" && 브랜드) {
@@ -654,7 +657,7 @@
                   id="id_{인덱스}_product"
                   bind:this={품목명입력란[품목.uuid]}
                   bind:value={품목.productInfo.product}
-                  onfocus={e => 선택상자열기(품목, "품목명", e.currentTarget, 인덱스, 품목.productInfo.brand)}
+                  onfocus={e => 선택상자열기(품목, "품목명", e.currentTarget, 인덱스)}
                   onblur={e => {
                     e.currentTarget.removeEventListener("input", 선택상자검색);
                     e.currentTarget.removeEventListener("keydown", 선택상자검색항목선택);
@@ -668,27 +671,33 @@
               {/if}
               <div class="app_col" style="--flex-basis: 20%;">
                 <div><label for="id_{인덱스}_sell_price" class="app_label block">소비자가</label></div>
-                <input type="text" id="id_{인덱스}_sell_price" value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price))} readonly />
+                <div class="app_text_input" data-label="원"><input type="text" id="id_{인덱스}_sell_price" value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price))} readonly /></div>
               </div>
               <div class="app_col" style="--flex-basis: 20%;">
                 <div><label for="id_{인덱스}_dome_price" class="app_label block">공급단가</label></div>
-                <input
-                  type="text"
-                  id="id_{인덱스}_dome_price"
-                  value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price))}
-                  oninput={e => {
-                    가격계산(e, 품목, "공급단가");
-                  }} />
+                <div class="app_text_input" data-label="원">
+                  <input
+                    type="text"
+                    id="id_{인덱스}_dome_price"
+                    value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price))}
+                    oninput={e => {
+                      가격계산(e, 품목, "공급단가");
+                    }} />
+                </div>
               </div>
               <div class="app_col" style="--flex-basis: 10%;">
                 <div><label for="id_{인덱스}_qty" class="app_label block">수량</label></div>
-                <input
-                  type="text"
-                  id="id_{인덱스}_qty"
-                  value={new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty)))}
-                  oninput={e => {
-                    가격계산(e, 품목, "수량");
-                  }} />
+                <div class="app_text_input" data-label="개">
+                  <input
+                    type="text"
+                    class="app_text_input"
+                    data-label="개"
+                    id="id_{인덱스}_qty"
+                    value={new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty)))}
+                    oninput={e => {
+                      가격계산(e, 품목, "수량");
+                    }} />
+                </div>
               </div>
               <div class="app_col" style="--flex-basis: 10%;">
                 <div><label for="id_{인덱스}_margin" class="app_label block">마진(%)</label></div>
@@ -702,7 +711,7 @@
               </div>
               <div class="app_col" style="--flex-basis: 40%;">
                 <div><label for="id_{인덱스}_total_dome" class="app_label block">공급합계</label></div>
-                <input type="text" id="id_{인덱스}_total_dome" value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.total_dome))} readonly />
+                <div class="app_text_input" data-label="원"><input type="text" id="id_{인덱스}_total_dome" value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.total_dome))} readonly /></div>
               </div>
             </div>
           </div>
@@ -710,22 +719,23 @@
       </div>
     {/each}
   </div>
-  <div class="app_footer">
+  <div class="app_footer app_row">
     <button type="button" onclick={() => 품목추가(true)}>추가</button>
-    <div style="display: flex; align-items:center;">
+    <div class="app_col" style="display: flex; align-items:center; justify-content: flex-end;">
       <div style="margin: 0; padding: 0.5em 0.5em calc(0.5em - 1px); border: 1px solid #ddd; border-right: none; box-sizing: border-box; background: #eee; border-radius: 4px 0 0 4px">총합계</div>
-      <input
-        style="margin: 0; width: unset; border: 1px solid #ddd; border-radius: 0 4px 4px 0"
-        type="text"
-        readonly
-        value={new Intl.NumberFormat("ko-KR").format(
-          품목리스트.reduce((val, x) => {
-            return val + (x.productInfo.total_dome ?? 0);
-          }, 0)
-        )} />
+      <div class="app_text_input" data-label="원">
+        <input
+          style="margin: 0; width: unset; border: 1px solid #ddd; border-radius: 0 4px 4px 0"
+          type="text"
+          readonly
+          value={new Intl.NumberFormat("ko-KR").format(
+            품목리스트.reduce((val, x) => {
+              return val + (x.productInfo.total_dome ?? 0);
+            }, 0)
+          )} />
+      </div>
     </div>
-    <div class="gap">&nbsp;</div>
-    <div><button type="button" onclick={() => 엑셀파일선택?.click()}>엑셀자료 불러오기</button><input hidden type="file" accept=".xlsx,.xls" bind:this={엑셀파일선택} onchange={엑셀파싱} /></div>
+    <div style="text-align: right"><button type="button" onclick={() => 엑셀파일선택?.click()}>엑셀자료 불러오기</button><input hidden type="file" accept=".xlsx,.xls" bind:this={엑셀파일선택} onchange={엑셀파싱} /></div>
   </div>
   {#if 선택상자열림}
     <div class="select_box" bind:this={선택상자} transition:fly={{ y: -10, duration: 100 }}>
@@ -745,7 +755,7 @@
                     선택상자호출자.품목.productInfo.total_dome = 0;
                     선택상자호출자.품목.productInfo.useprop = false;
                     선택상자호출자.품목.productInfo.soldout = false;
-                    if (선택상자호출자.요소 instanceof HTMLInputElement) 선택상자호출자.요소.value = 선택항목.brand ?? "";
+                    if (선택상자호출자.요소 instanceof HTMLInputElement) 선택상자호출자.품목.productInfo.brand = 선택항목.brand ?? "";
 
                     const uuid = 선택상자호출자.품목.uuid;
                     if (uuid) setTimeout(() => 품목명입력란[uuid]?.focus(), 100);
@@ -900,6 +910,8 @@
   .app_radio input[type="radio"] {
     width: 0;
     height: 0;
+    margin: 0;
+    padding: 0;
   }
   .app_radio:has(input[type="radio"])::before {
     content: "";
@@ -908,6 +920,7 @@
     display: inline-block;
     width: 1em;
     height: 1em;
+    margin-right: 0.3em;
     border: 2px solid #0002;
     background: white;
     transition: 0.1s;
@@ -935,6 +948,26 @@
   }
   .app_radio:has(input[type="radio"]:checked)::after {
     background: rgb(0, 109, 211);
+  }
+
+  .app_text_input {
+    position: relative;
+  }
+  .app_text_input input[type="text"] {
+    padding-right: 2.2em;
+    text-align: right;
+  }
+  .app_text_input::after {
+    content: attr(data-label);
+    position: absolute;
+    padding: 0.5em;
+    right: 0;
+    top: 0;
+    border: 1px solid transparent;
+    border-left: 1px solid #0002;
+    box-sizing: border-box;
+    background: #0001;
+    border-radius: 0 6px 6px 0;
   }
 
   .app_body {
@@ -1037,10 +1070,6 @@
     background: rgb(151, 160, 170);
   }
 
-  .gap {
-    flex-grow: 1;
-  }
-
   .excelLoading {
     position: relative;
   }
@@ -1085,7 +1114,7 @@
   .excelWindow select {
     width: 100%;
   }
-  @media screen and (max-width: 512px) {
+  @media screen and (max-width: 640px) {
     .app_row .app_col {
       flex-basis: 100%;
     }
