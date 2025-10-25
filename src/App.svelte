@@ -7,7 +7,7 @@
   import { fade, fly } from "svelte/transition";
   import { parseExcelWithWorker } from "./lib/parseExcel";
   import type SwalType from "sweetalert2";
-  import Portal from 'svelte-portal';
+  import Portal from "svelte-portal";
 
   type 배송형태종류타입 = (typeof 배송형태종류)[number];
 
@@ -35,12 +35,12 @@
 
   type 배송정보타입 = {
     name: string | undefined;
-    hp1: number | undefined;
-    hp2: number | undefined;
+    hp1: string | undefined;
+    hp2: string | undefined;
     addr1: string | undefined;
     addr2: string | undefined;
     addr3: string | undefined;
-    postcode: number | undefined;
+    postcode: string | undefined;
     msg: string | undefined;
   };
 
@@ -95,7 +95,9 @@
   let 선택상자선택항목: number = $state(-1);
 
   let 품절팝업열림: boolean = $state(false);
+  let 품절팝업내용: HTMLElement | undefined = $state();
   let 전자배송팝업열림: boolean = $state(false);
+  let 전자배송팝업내용: HTMLTextAreaElement | undefined = $state();
 
   let 우편번호검색열림: Record<string, boolean> = $state({});
   let 우편번호검색상자: Record<string, HTMLElement> = $state({});
@@ -137,6 +139,39 @@
     const 값 = (e.target as HTMLSelectElement).value;
     if (배송형태종류.includes(값 as any)) {
       배송형태 = 값 as 배송형태종류타입;
+      if (값 === "익일수령택배") {
+        품목리스트 = 품목리스트.map((x: 품목리스트항목타입) => {
+          return {
+            ...x,
+            deliveryInfo: {
+              name: 기본주소?.name,
+              hp1: 기본주소?.hp1,
+              hp2: 기본주소?.hp2,
+              postcode: 기본주소?.postcode,
+              addr1: 기본주소?.addr1,
+              addr2: 기본주소?.addr2,
+              addr3: 기본주소?.addr3,
+              msg: undefined,
+            },
+          };
+        });
+      } else {
+        품목리스트 = 품목리스트.map((x: 품목리스트항목타입) => {
+          return {
+            ...x,
+            deliveryInfo: {
+              name: undefined,
+              hp1: undefined,
+              hp2: undefined,
+              postcode: undefined,
+              addr1: undefined,
+              addr2: undefined,
+              addr3: undefined,
+              msg: undefined,
+            },
+          };
+        });
+      }
     }
   }
 
@@ -149,7 +184,7 @@
     요소.value = 값;
     const 숫자값 = Number(값) || 0;
 
-    const 인덱스 = 품목리스트.findIndex(요소 => 요소.uuid == 품목.uuid);
+    const 인덱스 = 품목리스트.findIndex((요소) => 요소.uuid == 품목.uuid);
 
     if (인덱스 == -1) return;
 
@@ -198,7 +233,7 @@
     const 브랜드 = 품목.productInfo.brand;
 
     if (유형 == "브랜드") {
-      선택상자항목 = Object.keys(전체품목).map(x => ({ brand: x, product: undefined, PROD_CD: undefined, software: undefined, soldout: undefined }));
+      선택상자항목 = Object.keys(전체품목).map((x) => ({ brand: x, product: undefined, PROD_CD: undefined, software: undefined, soldout: undefined }));
     } else if (유형 == "품목명" && 브랜드) {
       const key = String(브랜드);
       const items = (전체품목 as 전체품목리스트)[key];
@@ -211,7 +246,7 @@
       }
     } else {
       let 임시배열: any[] = [];
-      Object.keys(전체품목).forEach(각브랜드 => {
+      Object.keys(전체품목).forEach((각브랜드) => {
         const items = 전체품목[각브랜드];
         if (Array.isArray(items)) {
           임시배열 = [
@@ -228,7 +263,7 @@
     if (유형) {
       선택상자조정();
       선택상자열림 = true;
-      선택상자선택항목 = 선택상자항목.findIndex(x => x.product == (요소 as HTMLInputElement).value || x.brand == (요소 as HTMLInputElement).value);
+      선택상자선택항목 = 선택상자항목.findIndex((x) => x.product == (요소 as HTMLInputElement).value || x.brand == (요소 as HTMLInputElement).value);
       window.addEventListener("click", 선택상자닫기);
       요소.addEventListener("input", 선택상자검색);
       요소.addEventListener("keydown", 선택상자검색항목선택);
@@ -276,16 +311,20 @@
     컨테이너.style.setProperty("--selectbox_width", String(Math.max(호출자속성.width, 200)));
   }
 
+  function 내용리셋(품목: 품목리스트항목타입) {
+    품목.productInfo.product = "";
+    품목.productInfo.PROD_CD = "";
+    품목.productInfo.sell_price = 0;
+    품목.productInfo.dome_price = 0;
+    품목.productInfo.total_dome = 0;
+    품목.productInfo.useprop = false;
+    품목.productInfo.soldout = false;
+  }
+
   async function 선택상자항목선택(선택항목: 임시배열타입) {
     if (isHTMLElement(선택상자호출자.요소) && 선택상자호출자.품목) {
       if (선택상자호출자.유형 == "브랜드") {
-        선택상자호출자.품목.productInfo.product = "";
-        선택상자호출자.품목.productInfo.PROD_CD = "";
-        선택상자호출자.품목.productInfo.sell_price = 0;
-        선택상자호출자.품목.productInfo.dome_price = 0;
-        선택상자호출자.품목.productInfo.total_dome = 0;
-        선택상자호출자.품목.productInfo.useprop = false;
-        선택상자호출자.품목.productInfo.soldout = false;
+        내용리셋(선택상자호출자.품목);
         if (선택상자호출자.요소 instanceof HTMLInputElement) 선택상자호출자.품목.productInfo.brand = 선택항목.brand ?? "";
 
         const uuid = 선택상자호출자.품목.uuid;
@@ -316,13 +355,7 @@
         if (선택항목.software == "0" && 발주서상태 != "선오더" && (선택항목.soldout || 실시간품절여부)) {
           const 품절팝업결과 = (await 품절팝업()) as { isConfirmed: any; isDenied: any; dismiss: any };
           if (품절팝업결과.isDenied) {
-            선택상자호출자.품목.productInfo.product = "";
-            선택상자호출자.품목.productInfo.PROD_CD = "";
-            선택상자호출자.품목.productInfo.sell_price = 0;
-            선택상자호출자.품목.productInfo.dome_price = 0;
-            선택상자호출자.품목.productInfo.total_dome = 0;
-            선택상자호출자.품목.productInfo.useprop = false;
-            선택상자호출자.품목.productInfo.soldout = false;
+            내용리셋(선택상자호출자.품목);
             return;
           }
 
@@ -332,7 +365,7 @@
               Swal.fire({
                 icon: "error",
                 title: "알림!",
-                html: "현재 선오더 발주 가능 기간이 아닙니다!",
+                text: "현재 선오더 발주 가능 기간이 아닙니다!",
                 confirmButtonText: "확인",
               });
               return false;
@@ -343,7 +376,7 @@
         if (선택항목.software == "1" && 배송형태 != "전자배송") {
           const swal = await Swal.fire({
             title: "알림!",
-            html: ``,
+            html: `<!--.esd-popup .swal-html-container -->`,
             confirmButtonColor: "#FDAB29",
             icon: "warning",
             confirmButtonText: "확인",
@@ -361,26 +394,24 @@
               return false;
             },
             preConfirm: () => {
-              if (!(document.querySelector(".swal2-html-container textarea.wizard-3-textarea") as HTMLTextAreaElement)?.value) {
+              if (!전자배송팝업내용?.value) {
                 return Swal.showValidationMessage("수신 받을 이메일 주소를 입력하세요!");
               } else {
-                if ((document.querySelector(".swal2-html-container textarea.wizard-3-textarea") as HTMLTextAreaElement)?.value) {
-                  try {
-                    //@ts-ignore
-                    CKEDITOR.instances.wr_content.setData("<p>수신 받을 이메일 주소: </p><p>" + (document.querySelector(".swal2-html-container textarea.wizard-3-textarea") as HTMLTextAreaElement)?.value.replaceAll("\n", "<br>") + "</p>");
-                  } catch {
-                    if (!document.querySelector("#wr_content")) return;
-                    (document.querySelector("#wr_content") as HTMLTextAreaElement).value = "수신 받을 이메일 주소:\n" + (document.querySelector(".swal2-html-container textarea.wizard-3-textarea") as HTMLTextAreaElement)?.value;
-                  }
+                try {
+                  //@ts-ignore
+                  CKEDITOR.instances.wr_content.setData("<p>수신 받을 이메일 주소: </p><p>" + (전자배송팝업내용.value.replaceAll("\n", "<br>") + "</p>"));
+                } catch {
+                  if (!document.querySelector("#wr_content")) return;
+                  (document.querySelector("#wr_content") as HTMLTextAreaElement).value = "수신 받을 이메일 주소:\n" + 전자배송팝업내용.value;
                 }
               }
             },
             willOpen: () => {
-              전자배송팝업열림 = true
+              전자배송팝업열림 = true;
             },
             customClass: {
-              container: 'esd-popup'
-            }
+              container: "esd-popup",
+            },
           });
 
           if (swal.isConfirmed) {
@@ -389,6 +420,8 @@
             //@ts-ignore
             window.wr_content_open(true);
             document.querySelector("#use_content")?.setAttribute("checked", "checked");
+          } else {
+            return false;
           }
         }
 
@@ -396,7 +429,7 @@
         선택상자호출자.품목.productInfo.product = 선택항목.product;
         if (선택상자호출자.요소 instanceof HTMLInputElement) 선택상자호출자.요소.value = 선택항목.product ?? "";
         if (!선택상자호출자.품목.productInfo.brand) return;
-        const 인덱스 = 전체품목[선택상자호출자.품목.productInfo.brand].findIndex(x => x.product == 선택상자호출자.품목?.productInfo.product);
+        const 인덱스 = 전체품목[선택상자호출자.품목.productInfo.brand].findIndex((x) => x.product == 선택상자호출자.품목?.productInfo.product);
 
         if (인덱스 != -1) {
           선택상자호출자.품목.productInfo.sell_price = Number(전체품목[선택상자호출자.품목.productInfo.brand][인덱스].price);
@@ -416,10 +449,14 @@
     }
   }
 
-  function 품목추가(옵션: {
-    복제?: boolean,
-    데이터?: 품목리스트항목타입[]
-  } | undefined = undefined) {
+  function 품목추가(
+    옵션:
+      | {
+          복제?: boolean;
+          데이터?: 품목리스트항목타입[];
+        }
+      | undefined = undefined
+  ) {
     품목리스트 = [
       ...품목리스트,
       옵션 && 옵션.복제
@@ -721,211 +758,119 @@
   });
 </script>
 
-<svelte:window
-  onresize={선택상자조정}
-  onscroll={선택상자조정} />
-<div
-  class="app_container"
-  bind:this={컨테이너}>
-  <div
-    class="prod_list"
-    class:excelLoading={엑셀로딩}>
+<svelte:window onresize={선택상자조정} onscroll={선택상자조정} />
+<div class="app_container" bind:this={컨테이너}>
+  <div class="prod_list" class:excelLoading={엑셀로딩}>
     {#each 품목리스트 as 품목, 인덱스 (품목.uuid)}
       <div
         class="prod_item"
-        {@attach node => {
+        {@attach (node) => {
           node.scrollIntoView({ block: "nearest" });
         }}
-        transition:fly={{ y: -10, duration: 100 }}>
+        transition:fly={{ y: -10, duration: 100 }}
+      >
         <div class="app_header">
-          <button
-            type="button"
-            class="arcodian"
-            onclick={() => (품목.collapsed = !품목.collapsed)}
-            aria-label="품목 접기/펼치기"
-            title="품목 접기/펼치기">{@html 품목.collapsed ? `<i class="fas fa-chevron-right"></i>` : `<i class="fas fa-chevron-down"></i>`}</button>
+          <button type="button" class="arcodian" onclick={() => (품목.collapsed = !품목.collapsed)} aria-label="품목 접기/펼치기" title="품목 접기/펼치기">{@html 품목.collapsed ? `<i class="fas fa-chevron-right"></i>` : `<i class="fas fa-chevron-down"></i>`}</button>
           <span><strong>품목{인덱스 + 1}</strong></span>
           <div class="radio_vertical">
             <label class="app_radio">
-              <input
-                type="radio"
-                id="id_{인덱스}_itemType1"
-                name="itemType_{인덱스}"
-                value={0}
-                bind:group={품목.productInfo.itemType} />
+              <input type="radio" id="id_{인덱스}_itemType1" name="itemType_{인덱스}" value={0} bind:group={품목.productInfo.itemType} />
               <span>일반</span>
             </label>
             <label class="app_radio">
-              <input
-                type="radio"
-                id="id_{인덱스}_itemType2"
-                name="itemType_{인덱스}"
-                value={1}
-                bind:group={품목.productInfo.itemType} />
+              <input type="radio" id="id_{인덱스}_itemType2" name="itemType_{인덱스}" value={1} bind:group={품목.productInfo.itemType} />
               <span>데모(40%)</span>
             </label>
             <label class="app_radio">
-              <input
-                type="radio"
-                id="id_{인덱스}_itemType3"
-                name="itemType_{인덱스}"
-                value={2}
-                bind:group={품목.productInfo.itemType} />
+              <input type="radio" id="id_{인덱스}_itemType3" name="itemType_{인덱스}" value={2} bind:group={품목.productInfo.itemType} />
               <span>데모(50%)</span>
             </label>
           </div>
           <div class="action">
             {#if 품목리스트.length > 1}
-              <button
-                type="button"
-                onclick={() => 품목리스트.splice(인덱스, 1)}>삭제</button>
+              <button type="button" onclick={() => 품목리스트.splice(인덱스, 1)}>삭제</button>
             {/if}
           </div>
         </div>
         {#if !품목.collapsed}
-          <div
-            class="app_body"
-            transition:fly={{ y: -10, duration: 100 }}>
+          <div class="app_body" transition:fly={{ y: -10, duration: 100 }}>
             {#if 배송형태 && ["대리배송", "익일수령택배", "퀵착불"].includes(배송형태)}
               <div class="deliveryInfo app_row">
-                <div
-                  class="app_col"
-                  style="--flex-basis: 33%;">
+                <div class="app_col" style="--flex-basis: 33%;">
                   <div>
-                    <label
-                      for="id_{인덱스}_name"
-                      class="app_label block">고객명</label>
+                    <label for="id_{인덱스}_name" class="app_label block">고객명</label>
                   </div>
-                  <input
-                    type="text"
-                    id="id_{인덱스}_name"
-                    bind:value={품목.deliveryInfo.name} />
+                  <input type="text" id="id_{인덱스}_name" bind:value={품목.deliveryInfo.name} />
                 </div>
-                <div
-                  class="app_col"
-                  style="--flex-basis: 33%;">
+                <div class="app_col" style="--flex-basis: 33%;">
                   <div>
-                    <label
-                      for="id_{인덱스}_hp1"
-                      class="app_label block">전화번호1</label>
+                    <label for="id_{인덱스}_hp1" class="app_label block">전화번호1</label>
                   </div>
-                  <input
-                    type="text"
-                    id="id_{인덱스}_hp1"
-                    bind:value={품목.deliveryInfo.hp1} />
+                  <input type="text" id="id_{인덱스}_hp1" bind:value={품목.deliveryInfo.hp1} />
                 </div>
-                <div
-                  class="app_col"
-                  style="--flex-basis: 33%;">
+                <div class="app_col" style="--flex-basis: 33%;">
                   <div>
-                    <label
-                      for="id_{인덱스}_hp2"
-                      class="app_label block">전화번호2</label>
+                    <label for="id_{인덱스}_hp2" class="app_label block">전화번호2</label>
                   </div>
-                  <input
-                    type="text"
-                    id="id_{인덱스}_hp2"
-                    bind:value={품목.deliveryInfo.hp2} />
+                  <input type="text" id="id_{인덱스}_hp2" bind:value={품목.deliveryInfo.hp2} />
                 </div>
-                <div
-                  class="app_col"
-                  style="--flex-basis: 100%;">
+                <div class="app_col" style="--flex-basis: 100%;">
                   <div class="app_label block">
-                    <span style="margin-right: 0.5em">주소</span><button
-                      type="button"
-                      onclick={e => 우편번호검색(품목)}>주소 검색</button>
+                    <span style="margin-right: 0.5em">주소</span><button type="button" onclick={(e) => 우편번호검색(품목)}>주소 검색</button>
                   </div>
                 </div>
                 {#if 우편번호검색열림[품목.uuid]}
-                  <div
-                    class="postcodebox app_col"
-                    style="--flex-basis: 100%"
-                    transition:fly={{ y: -10, duration: 100 }}>
+                  <div class="postcodebox app_col" style="--flex-basis: 100%" transition:fly={{ y: -10, duration: 100 }}>
                     <div class="app_header">
                       우편번호검색
                       <button
                         type="button"
                         onclick={() => {
                           우편번호검색열림[품목.uuid] = false;
-                        }}>닫기</button>
+                        }}>닫기</button
+                      >
                     </div>
-                    <div
-                      class="app_body"
-                      bind:this={우편번호검색상자[품목.uuid]}>
-                    </div>
+                    <div class="app_body" bind:this={우편번호검색상자[품목.uuid]}></div>
                   </div>
                 {/if}
-                <div
-                  class="app_col"
-                  style="--flex-basis: 50%">
-                  <input
-                    type="text"
-                    placeholder="우편번호"
-                    bind:value={품목.deliveryInfo.postcode} />
+                <div class="app_col" style="--flex-basis: 50%">
+                  <input type="text" placeholder="우편번호" bind:value={품목.deliveryInfo.postcode} />
                 </div>
-                <div
-                  class="app_col"
-                  style="--flex-basis: 50%">
-                  <input
-                    type="text"
-                    placeholder="배송메시지"
-                    bind:value={품목.deliveryInfo.msg} />
+                <div class="app_col" style="--flex-basis: 50%">
+                  <input type="text" placeholder="배송메시지" bind:value={품목.deliveryInfo.msg} />
                 </div>
-                <div
-                  class="app_col"
-                  style="--flex-basis: 100%">
-                  <input
-                    type="text"
-                    placeholder="기본주소"
-                    bind:value={품목.deliveryInfo.addr1} />
+                <div class="app_col" style="--flex-basis: 100%">
+                  <input type="text" placeholder="기본주소" bind:value={품목.deliveryInfo.addr1} />
                 </div>
-                <div
-                  class="app_col"
-                  style="--flex-basis: 50%">
-                  <input
-                    bind:this={우편번호상세입력란[품목.uuid]}
-                    type="text"
-                    placeholder="상세주소"
-                    bind:value={품목.deliveryInfo.addr2} />
+                <div class="app_col" style="--flex-basis: 50%">
+                  <input bind:this={우편번호상세입력란[품목.uuid]} type="text" placeholder="상세주소" bind:value={품목.deliveryInfo.addr2} />
                 </div>
-                <div
-                  class="app_col"
-                  style="--flex-basis: 50%">
-                  <input
-                    type="text"
-                    placeholder="참고항목"
-                    bind:value={품목.deliveryInfo.addr3} />
+                <div class="app_col" style="--flex-basis: 50%">
+                  <input type="text" placeholder="참고항목" bind:value={품목.deliveryInfo.addr3} />
                 </div>
               </div>
               <hr />
             {/if}
             <div class="prodInfo app_row">
-              <div
-                class="app_col"
-                style="--flex-basis: 20%;">
+              <div class="app_col" style="--flex-basis: 20%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_brand"
-                    class="app_label block">브랜드</label>
+                  <label for="id_{인덱스}_brand" class="app_label block">브랜드</label>
                 </div>
                 <input
                   type="text"
                   placeholder="브랜드"
                   id="id_{인덱스}_brand"
                   bind:value={품목.productInfo.brand}
-                  onfocus={e => 선택상자열기(품목, "브랜드", e.currentTarget, 인덱스)}
-                  onblur={e => {
+                  onfocus={(e) => 선택상자열기(품목, "브랜드", e.currentTarget, 인덱스)}
+                  onblur={(e) => {
                     e.currentTarget.removeEventListener("input", 선택상자검색);
                     e.currentTarget.removeEventListener("keydown", 선택상자검색항목선택);
-                  }} />
+                  }}
+                />
               </div>
-              <div
-                class="app_col"
-                style="--flex-basis: {품목.productInfo.useprop || 품목.productInfo.PROD_CD == 'etc_001' ? '40' : '80'}%;">
+              <div class="app_col" style="--flex-basis: {품목.productInfo.useprop || 품목.productInfo.PROD_CD == 'etc_001' ? '40' : '80'}%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_product"
-                    class="app_label block">품목명 <span style="font-weight:normal; font-size: 0.9em">(찾는 품목이 없는 경우 선택 없이 진행 가능)</span></label>
+                  <label for="id_{인덱스}_product" class="app_label block">품목명 <span style="font-weight:normal; font-size: 0.9em">(찾는 품목이 없는 경우 선택 없이 진행 가능)</span></label>
                 </div>
                 <input
                   type="text"
@@ -933,119 +878,80 @@
                   id="id_{인덱스}_product"
                   bind:this={품목명입력란[품목.uuid]}
                   bind:value={품목.productInfo.product}
-                  onfocus={e => 선택상자열기(품목, "품목명", e.currentTarget, 인덱스)}
-                  onblur={e => {
+                  onfocus={(e) => 선택상자열기(품목, "품목명", e.currentTarget, 인덱스)}
+                  onblur={(e) => {
                     e.currentTarget.removeEventListener("input", 선택상자검색);
                     e.currentTarget.removeEventListener("keydown", 선택상자검색항목선택);
-                  }} />
+                  }}
+                />
               </div>
               {#if 품목.productInfo.useprop || 품목.productInfo.PROD_CD == "etc_001"}
-                <div
-                  class="app_col"
-                  style="--flex-basis: 40%;">
+                <div class="app_col" style="--flex-basis: 40%;">
                   <div>
-                    <label
-                      for="id_{인덱스}_prop"
-                      class="app_label block">옵션</label>
+                    <label for="id_{인덱스}_prop" class="app_label block">옵션</label>
                   </div>
-                  <input
-                    type="text"
-                    id="id_{인덱스}_prop"
-                    bind:value={품목.productInfo.prop} />
+                  <input type="text" id="id_{인덱스}_prop" bind:value={품목.productInfo.prop} />
                 </div>
               {/if}
-              <div
-                class="app_col"
-                style="--flex-basis: 20%;">
+              <div class="app_col" style="--flex-basis: 20%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_sell_price"
-                    class="app_label block">소비자가</label>
+                  <label for="id_{인덱스}_sell_price" class="app_label block">소비자가</label>
                 </div>
-                <div
-                  class="app_text_input"
-                  data-label="원">
-                  <input
-                    type="text"
-                    id="id_{인덱스}_sell_price"
-                    value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price))}
-                    readonly />
+                <div class="app_text_input" data-label="원">
+                  <input type="text" id="id_{인덱스}_sell_price" value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price))} readonly />
                 </div>
               </div>
-              <div
-                class="app_col"
-                style="--flex-basis: 20%;">
+              <div class="app_col" style="--flex-basis: 20%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_dome_price"
-                    class="app_label block">공급단가</label>
+                  <label for="id_{인덱스}_dome_price" class="app_label block">공급단가</label>
                 </div>
-                <div
-                  class="app_text_input"
-                  data-label="원">
+                <div class="app_text_input" data-label="원">
                   <input
                     type="text"
                     id="id_{인덱스}_dome_price"
                     value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price))}
-                    oninput={e => {
+                    oninput={(e) => {
                       가격계산(e, 품목, "공급단가");
-                    }} />
+                    }}
+                  />
                 </div>
               </div>
-              <div
-                class="app_col"
-                style="--flex-basis: 10%;">
+              <div class="app_col" style="--flex-basis: 10%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_qty"
-                    class="app_label block">수량</label>
+                  <label for="id_{인덱스}_qty" class="app_label block">수량</label>
                 </div>
-                <div
-                  class="app_text_input"
-                  data-label="개">
+                <div class="app_text_input" data-label="개">
                   <input
                     type="text"
                     class="app_text_input"
                     data-label="개"
                     id="id_{인덱스}_qty"
                     value={new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty)))}
-                    oninput={e => {
+                    oninput={(e) => {
                       가격계산(e, 품목, "수량");
-                    }} />
+                    }}
+                  />
                 </div>
               </div>
-              <div
-                class="app_col"
-                style="--flex-basis: 10%;">
+              <div class="app_col" style="--flex-basis: 10%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_margin"
-                    class="app_label block">마진(%)</label>
+                  <label for="id_{인덱스}_margin" class="app_label block">마진(%)</label>
                 </div>
                 <input
                   type="text"
                   id="id_{인덱스}_margin"
                   value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin))}
-                  oninput={e => {
+                  oninput={(e) => {
                     가격계산(e, 품목, "마진");
-                  }} />
+                  }}
+                />
               </div>
-              <div
-                class="app_col"
-                style="--flex-basis: 40%;">
+              <div class="app_col" style="--flex-basis: 40%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_total_dome"
-                    class="app_label block">공급합계</label>
+                  <label for="id_{인덱스}_total_dome" class="app_label block">공급합계</label>
                 </div>
-                <div
-                  class="app_text_input"
-                  data-label="원">
-                  <input
-                    type="text"
-                    id="id_{인덱스}_total_dome"
-                    value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.total_dome))}
-                    readonly />
+                <div class="app_text_input" data-label="원">
+                  <input type="text" id="id_{인덱스}_total_dome" value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.total_dome))} readonly />
                 </div>
               </div>
             </div>
@@ -1055,16 +961,10 @@
     {/each}
   </div>
   <div class="app_footer app_row">
-    <button
-      type="button"
-      onclick={() => 품목추가({복제: true})}>추가</button>
-    <div
-      class="app_col"
-      style="display: flex; align-items:center; justify-content: flex-end;">
+    <button type="button" onclick={() => 품목추가({ 복제: true })}>추가</button>
+    <div class="app_col" style="display: flex; align-items:center; justify-content: flex-end;">
       <div style="margin: 0; padding: 0.5em 0.5em calc(0.5em - 1px); border: 1px solid #ddd; border-right: none; box-sizing: border-box; background: #eee; border-radius: 4px 0 0 4px">총합계</div>
-      <div
-        class="app_text_input"
-        data-label="원">
+      <div class="app_text_input" data-label="원">
         <input
           style="margin: 0; width: unset; border: 1px solid #ddd; border-radius: 0 4px 4px 0"
           type="text"
@@ -1073,34 +973,20 @@
             품목리스트.reduce((val, x) => {
               return val + (x.productInfo.total_dome ?? 0);
             }, 0)
-          )} />
+          )}
+        />
       </div>
     </div>
     <div style="text-align: right">
-      <button
-        type="button"
-        onclick={() => 엑셀파일선택?.click()}>엑셀자료 불러오기</button
-      ><input
-        hidden
-        type="file"
-        accept=".xlsx,.xls"
-        bind:this={엑셀파일선택}
-        onchange={엑셀파싱} />
+      <button type="button" onclick={() => 엑셀파일선택?.click()}>엑셀자료 불러오기</button><input hidden type="file" accept=".xlsx,.xls" bind:this={엑셀파일선택} onchange={엑셀파싱} />
     </div>
   </div>
   {#if 선택상자열림}
-    <div
-      class="select_box"
-      bind:this={선택상자}
-      transition:fly={{ y: -10, duration: 100 }}>
+    <div class="select_box" bind:this={선택상자} transition:fly={{ y: -10, duration: 100 }}>
       <ul>
         {#each 선택상자항목 as 선택항목, 인덱스}
           <li>
-            <button
-              type="button"
-              class:searched={선택상자선택항목 == 인덱스}
-              onclick={() => 선택상자항목선택(선택항목)}
-              bind:this={선택상자요소배열[인덱스]}>
+            <button type="button" class:searched={선택상자선택항목 == 인덱스} onclick={() => 선택상자항목선택(선택항목)} bind:this={선택상자요소배열[인덱스]}>
               {선택상자호출자.유형 == "브랜드" ? 선택항목.brand : 선택항목.product}{typeof 선택항목 != "string" && 선택항목.soldout ? " (품절)" : ""}
             </button>
           </li>
@@ -1112,12 +998,8 @@
   {/if}
 </div>
 {#if 엑셀데이터선택창 && 엑셀데이터.length}
-  <div
-    class="excelWindow"
-    transition:fade={{ duration: 100 }}>
-    <div
-      class="inner"
-      transition:fly={{ y: 10, duration: 100 }}>
+  <div class="excelWindow" transition:fade={{ duration: 100 }}>
+    <div class="inner" transition:fly={{ y: 10, duration: 100 }}>
       <div class="app_header">
         <span>엑셀데이터 선택중입니다.</span><button
           type="button"
@@ -1126,17 +1008,13 @@
             엑셀로딩 = false;
             엑셀데이터 = [];
             엑셀양식 = [];
-          }}>닫기</button>
+          }}>닫기</button
+        >
       </div>
       <div class="app_body">
         <div class="steps">
           <div class="app_label">열 제목으로 삼을 줄을 선택해주세요:</div>
-          <select
-            name="column"
-            id="column"
-            size="5"
-            bind:value={엑셀제목줄}
-            style="margin-bottom: 1em;">
+          <select name="column" id="column" size="5" bind:value={엑셀제목줄} style="margin-bottom: 1em;">
             {#each 엑셀데이터 as 줄, 인덱스}
               <option value={인덱스}>{줄.join(" | ")}</option>
             {/each}
@@ -1145,18 +1023,11 @@
             <div class="app_label">입력하고자 하는 데이터를 선택해주세요:</div>
             <div class="app_row">
               {#each [{ label: "고객명", width: "33%" }, { label: "전화번호1", width: "33%" }, { label: "전화번호2", width: "33%" }, { label: "우편번호", width: "50%" }, { label: "배송메시지", width: "50%" }, { label: "기본주소", width: "100%" }, { label: "상세주소", width: "80%" }, { label: "참고항목", width: "20%" }, { label: "품목명", width: "100%" }] as 선택항목, 인덱스}
-                <div
-                  class="app_col"
-                  style="--flex-basis: {선택항목.width}">
+                <div class="app_col" style="--flex-basis: {선택항목.width}">
                   <div>
-                    <label
-                      for={선택항목.label}
-                      class="app_label block">{선택항목.label}</label>
+                    <label for={선택항목.label} class="app_label block">{선택항목.label}</label>
                   </div>
-                  <select
-                    name={선택항목.label}
-                    id={선택항목.label}
-                    bind:value={엑셀양식[인덱스]}>
+                  <select name={선택항목.label} id={선택항목.label} bind:value={엑셀양식[인덱스]}>
                     <option value={-1}>없음</option>
                     {#each 엑셀데이터[엑셀제목줄] as 제목, 인덱스}
                       <option value={인덱스}>{제목}</option>
@@ -1164,15 +1035,8 @@
                   </select>
                 </div>
               {/each}
-              <div
-                class="app_col"
-                style="--flex-basis: 100%; padding-top: 1em; display: flex; gap: 1em;">
-                <button
-                  type="button"
-                  onclick={() => 엑셀자료입력()}>교체</button
-                ><button
-                  type="button"
-                  onclick={() => 엑셀자료입력(true)}>추가</button>
+              <div class="app_col" style="--flex-basis: 100%; padding-top: 1em; display: flex; gap: 1em;">
+                <button type="button" onclick={() => 엑셀자료입력()}>교체</button><button type="button" onclick={() => 엑셀자료입력(true)}>추가</button>
               </div>
             </div>
           {/if}
@@ -1182,29 +1046,40 @@
   </div>
 {/if}
 {#if 품절팝업열림}
-<Portal target=".soldoutDialog .swal2-html-container">
-<div>
-  <p>해당 제품은 현재 [품절]입니다.</p><br />
-  <p>품절된 품목이 있어도 발주서 작성은 가능하지만<br /><strong>출고가 불가능</strong>한 점 참고 바랍니다.</p>
-  <p>
-    <strong style="color:red">(재고 부족으로 인해 출고가 불가능한 경우<br />
-    <u>별도 안내 없이 [취소]처리</u>됩니다.)</strong>
-  </p><br />
-  <p>재고 입고 일정 등 확인이 필요하실 경우<br />영업 담당자에게 문의 주시기 바랍니다.</p><br />
-  <p style='color: red'>담당자 확인 후 발주 진행하시는 경우에는 무관하며,<br /><strong>다른 품목을 선택하여 혼동이 발생하지 않도록 주의 바랍니다.<br /></strong></p><br />
-  <p>선오더로 발주하려면 <strong>'선오더로 변경'</strong>을 선택하세요.</p>
-</div>
-</Portal>
+  <Portal target=".soldoutDialog .swal2-html-container">
+    <div bind:this={품절팝업내용}>
+      <p>해당 제품은 현재 [품절]입니다.</p>
+      <br />
+      <p>품절된 품목이 있어도 발주서 작성은 가능하지만<br /><strong>출고가 불가능</strong>한 점 참고 바랍니다.</p>
+      <p>
+        <strong style="color:red"
+          >(재고 부족으로 인해 출고가 불가능한 경우<br />
+          <u>별도 안내 없이 [취소]처리</u>됩니다.)</strong
+        >
+      </p>
+      <br />
+      <p>재고 입고 일정 등 확인이 필요하실 경우<br />영업 담당자에게 문의 주시기 바랍니다.</p>
+      <br />
+      <p style="color: red">담당자 확인 후 발주 진행하시는 경우에는 무관하며,<br /><strong>다른 품목을 선택하여 혼동이 발생하지 않도록 주의 바랍니다.<br /></strong></p>
+      <br />
+      <p>선오더로 발주하려면 <strong>'선오더로 변경'</strong>을 선택하세요.</p>
+    </div>
+  </Portal>
 {/if}
 {#if 전자배송팝업열림}
-<Portal target=".esd-popup .swal2-html-container">
-  <p>해당 제품은 소프트웨어입니다.</p>
-  <p>소프트웨어 발주 시 카테고리는 전자배송으로 자동 설정됩니다.</p><br />
-  <p>전자배송 받으실 이메일 주소를 입력하세요.</p>
-  <p>(여러 주소로 받으실 경우 줄 단위로 구분해주세요.)</p><br />
-  <textarea class="wizard-3-textarea" placeholder="여기에 수신 받을 이메일 주소를 입력해주세요." style="width:100%; height: 200px; font-size: 15px; padding: 10px; line-height: 1.2"></textarea>
-</Portal>
+  <Portal target=".esd-popup .swal2-html-container">
+    <div>
+      <p>해당 제품은 소프트웨어입니다.</p>
+      <p>소프트웨어 발주 시 카테고리는 전자배송으로 자동 설정됩니다.</p>
+      <br />
+      <p>전자배송 받으실 이메일 주소를 입력하세요.</p>
+      <p>(여러 주소로 받으실 경우 줄 단위로 구분해주세요.)</p>
+      <br />
+      <textarea bind:this={전자배송팝업내용} class="wizard-3-textarea" placeholder="여기에 수신 받을 이메일 주소를 입력해주세요." style="width:100%; height: 200px; font-size: 15px; padding: 10px; line-height: 1.2"></textarea>
+    </div>
+  </Portal>
 {/if}
+
 <style>
   :global(.soldoutDialog p) {
     margin: 0;
