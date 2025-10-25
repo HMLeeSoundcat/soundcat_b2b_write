@@ -16,6 +16,7 @@
     "read-excel-file": "^6.0.1",
     "svelte": "^5.39.6",
     "svelte-check": "^4.3.2",
+    "svelte-portal": "^2.2.1",
     "sweetalert2": "^11.26.3",
     "typescript": "~5.9.3",
     "vite": "^7.1.7"
