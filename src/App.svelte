@@ -7,6 +7,7 @@
   import { fade, fly } from "svelte/transition";
   import { parseExcelWithWorker } from "./lib/parseExcel";
   import type SwalType from "sweetalert2";
+  import Portal from 'svelte-portal';
 
   type 배송형태종류타입 = (typeof 배송형태종류)[number];
 
@@ -92,6 +93,9 @@
     유형: undefined,
   });
   let 선택상자선택항목: number = $state(-1);
+
+  let 품절팝업열림: boolean = $state(false);
+  let 전자배송팝업열림: boolean = $state(false);
 
   let 우편번호검색열림: Record<string, boolean> = $state({});
   let 우편번호검색상자: Record<string, HTMLElement> = $state({});
@@ -213,7 +217,7 @@
           임시배열 = [
             ...임시배열,
             ...items.map((x: 개별품목정보) => {
-              return { brand: x.brand, product: x.product, software: x.software, soldout: x.zerostock };
+              return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock };
             }),
           ];
           선택상자항목 = 임시배열;
@@ -339,9 +343,7 @@
         if (선택항목.software == "1" && 배송형태 != "전자배송") {
           const swal = await Swal.fire({
             title: "알림!",
-            html: `<p>해당 제품은 소프트웨어입니다.</p><p>소프트웨어 발주 시 카테고리는 전자배송으로 자동 설정됩니다.</p></br><p>전자배송 받으실 이메일 주소를 입력하세요.</p>
-<p>(여러 주소로 받으실 경우 줄 단위로 구분해주세요.)</p></br>
-<textarea class="wizard-3-textarea" placeholder="여기에 수신 받을 이메일 주소를 입력해주세요." style="width:100%; height: 200px; font-size: 15px; padding: 10px; line-height: 1.2"></textarea>`,
+            html: ``,
             confirmButtonColor: "#FDAB29",
             icon: "warning",
             confirmButtonText: "확인",
@@ -373,6 +375,12 @@
                 }
               }
             },
+            willOpen: () => {
+              전자배송팝업열림 = true
+            },
+            customClass: {
+              container: 'esd-popup'
+            }
           });
 
           if (swal.isConfirmed) {
@@ -460,7 +468,7 @@
 
     const swalpopup = await Swal.fire({
       title: "품절 안내",
-      html: `<p>해당 제품은 현재 [품절]입니다.</p></br><p>품절된 품목이 있어도 발주서 작성은 가능하지만<br /><strong>출고가 불가능</strong>한 점 참고 바랍니다.</p><p><strong style="color:red">(재고 부족으로 인해 출고가 불가능한 경우<br><u>별도 안내 없이 [취소]처리</u>됩니다.)</strong></p></br><p>재고 입고 일정 등 확인이 필요하실 경우<br />영업 담당자에게 문의 주시기 바랍니다.</p></br><p style='color: red'>담당자 확인 후 발주 진행하시는 경우에는 무관하며,</br><strong>다른 품목을 선택하여 혼동이 발생하지 않도록 주의 바랍니다.</br></strong></p></br><p>선오더로 발주하려면 <strong>'선오더로 변경'</strong>을 선택하세요.</p>`,
+      html: ``,
       confirmButtonColor: "#FDAB29",
       icon: "warning",
       confirmButtonText: "선오더로 변경",
@@ -482,6 +490,7 @@
         return false;
       },
       willOpen: () => {
+        품절팝업열림 = true;
         dialog = document.querySelector(".soldoutDialog");
         dangerbtn = dialog?.querySelector(".btn-danger-hold");
         if (dialog && dangerbtn) {
@@ -504,6 +513,7 @@
         }, 10000);
       },
       didClose: () => {
+        품절팝업열림 = false;
         clearInterval(timerTimer);
         clearTimeout(timerTimerTimer);
       },
@@ -1171,7 +1181,30 @@
     </div>
   </div>
 {/if}
-
+{#if 품절팝업열림}
+<Portal target=".soldoutDialog .swal2-html-container">
+<div>
+  <p>해당 제품은 현재 [품절]입니다.</p><br />
+  <p>품절된 품목이 있어도 발주서 작성은 가능하지만<br /><strong>출고가 불가능</strong>한 점 참고 바랍니다.</p>
+  <p>
+    <strong style="color:red">(재고 부족으로 인해 출고가 불가능한 경우<br />
+    <u>별도 안내 없이 [취소]처리</u>됩니다.)</strong>
+  </p><br />
+  <p>재고 입고 일정 등 확인이 필요하실 경우<br />영업 담당자에게 문의 주시기 바랍니다.</p><br />
+  <p style='color: red'>담당자 확인 후 발주 진행하시는 경우에는 무관하며,<br /><strong>다른 품목을 선택하여 혼동이 발생하지 않도록 주의 바랍니다.<br /></strong></p><br />
+  <p>선오더로 발주하려면 <strong>'선오더로 변경'</strong>을 선택하세요.</p>
+</div>
+</Portal>
+{/if}
+{#if 전자배송팝업열림}
+<Portal target=".esd-popup .swal2-html-container">
+  <p>해당 제품은 소프트웨어입니다.</p>
+  <p>소프트웨어 발주 시 카테고리는 전자배송으로 자동 설정됩니다.</p><br />
+  <p>전자배송 받으실 이메일 주소를 입력하세요.</p>
+  <p>(여러 주소로 받으실 경우 줄 단위로 구분해주세요.)</p><br />
+  <textarea class="wizard-3-textarea" placeholder="여기에 수신 받을 이메일 주소를 입력해주세요." style="width:100%; height: 200px; font-size: 15px; padding: 10px; line-height: 1.2"></textarea>
+</Portal>
+{/if}
 <style>
   :global(.soldoutDialog p) {
     margin: 0;
