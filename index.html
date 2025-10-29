@@ -37,6 +37,7 @@
       </label>
     </div>
     <div id="app"></div>
+    <button onclick="prepareOrder()">유효성 검사</button>
     <textarea
       style="width: 100%; height: 400px; margin-top: 1em"
       id="data"></textarea>
@@ -45,6 +46,7 @@
       src="/src/main.ts"></script>
     <script>
       let orderType = "대기";
+      let pendingResolver = null;
       function setData(data) {
         document.querySelector("#data").value = JSON.stringify(data);
       }
@@ -70,8 +72,8 @@
         document.querySelector("#ex_1").value = v;
       }
 
-      function getExistingData () {
-        const data = `[{"uuid":"175e0a7c-ec8a-4cc0-9e77-80af8ef2c281","collapsed":false,"productInfo":{"itemType":0,"useprop":false,"sell_price":0,"dome_price":0,"qty":0,"margin":0,"total_dome":0,"soldout":false},"deliveryInfo":{}},{"uuid":"51094377-b4bc-48c6-af7c-f93e9531bac3","collapsed":false,"productInfo":{"itemType":0,"useprop":false,"sell_price":0,"dome_price":0,"qty":0,"margin":0,"total_dome":0,"soldout":false},"deliveryInfo":{}},{"uuid":"95ae3f65-0135-4d40-b298-57538d9d7385","collapsed":false,"productInfo":{"itemType":0,"useprop":false,"sell_price":0,"dome_price":0,"qty":0,"margin":0,"total_dome":0,"soldout":false},"deliveryInfo":{}}]`;
+      function getExistingData() {
+        const data = '[{"uuid":"eb1c4c8e-7d08-425e-beb6-12dd01d5324f","collapsed":false,"productInfo":{"itemType":0,"brand":"IFI","product":"[IFI] GND Defender","PROD_CD":"IFI_GNDDefender","useprop":false,"sell_price":139000,"dome_price":90350,"qty":1,"margin":35,"total_dome":90350,"soldout":false},"deliveryInfo":{"name":"권언신","hp1":"010-2672-2093","postcode":"01454","addr1":"서울 도봉구 도봉로116길 9-3","addr2":"2층","addr3":" (창동)","msg":"부재 시 문 앞에 놓아주세요."},"finished":false},{"uuid":"717730a6-b2bb-4a85-b320-58a0cebe6ea9","collapsed":false,"productInfo":{"itemType":0,"brand":"IFI","product":"[IFI] GND Defender","PROD_CD":"IFI_GNDDefender","useprop":false,"sell_price":139000,"dome_price":90350,"qty":2,"margin":35,"total_dome":180700,"soldout":false},"deliveryInfo":{"name":"권준호","hp1":"010-8953-4557","postcode":"07981","addr1":"서울 양천구 목동서로 70","addr2":"목동신시가지아파트2단지 216동 904호","addr3":" (목동, 목동신시가지아파트2단지)","msg":""},"finished":false},{"uuid":"5ea78112-d42b-4a18-b07d-14d7021ab90e","collapsed":false,"productInfo":{"itemType":0,"brand":"IFI","product":"[IFI] GND Defender","PROD_CD":"IFI_GNDDefender","useprop":false,"sell_price":139000,"dome_price":90350,"qty":1,"margin":35,"total_dome":90350,"soldout":false},"deliveryInfo":{"name":"최효석","hp1":"010-2707-4497","postcode":"17094","addr1":"경기 용인시 기흥구 신정로 25","addr2":"신흥덕롯데캐슬레이시티 107동501호","addr3":" (신갈동, 신흥덕롯데캐슬레이시티)","msg":"부재 시 문 앞에 놓아주세요."},"finished":false},{"uuid":"020bc95b-7267-49fc-af97-4774124739cd","collapsed":false,"productInfo":{"itemType":0,"brand":"IFI","product":"IFI] iSilencer+ MAX","PROD_CD":"IFI_iSilencer+MAX","useprop":false,"sell_price":110000,"dome_price":71500,"qty":1,"margin":35,"total_dome":71500,"soldout":false},"deliveryInfo":{"name":"최효석","hp1":"010-2707-4497","postcode":"17094","addr1":"경기 용인시 기흥구 신정로 25","addr2":"신흥덕롯데캐슬레이시티 107동501호","addr3":" (신갈동, 신흥덕롯데캐슬레이시티)","msg":"부재 시 문 앞에 놓아주세요."},"finished":false},{"uuid":"3afa500a-d51b-445e-a5aa-011363413ab9","collapsed":false,"productInfo":{"itemType":0,"brand":"IFI","product":"[iFi] iSilencer+ Type C>Type C","PROD_CD":"IFI_iSilencer+CC","useprop":false,"sell_price":79000,"dome_price":51350,"qty":1,"margin":35,"total_dome":51350,"soldout":false},"deliveryInfo":{"name":"장정덕","hp1":"010-7471-7175","postcode":"03745","addr1":"서울 서대문구 독립문로12나길 32","addr2":"202호","addr3":" (천연동)","msg":"문 앞에 놓고 문자 주세요~"},"finished":false},{"uuid":"8490ecd5-97f6-4385-847e-bad4186edd88","collapsed":false,"productInfo":{"itemType":0,"brand":"IFI","product":"[IFI] iSilencer+AA","PROD_CD":"IFI_iSilencer+AA","useprop":false,"sell_price":79000,"dome_price":51350,"qty":1,"margin":35,"total_dome":51350,"soldout":false},"deliveryInfo":{"name":"장정덕","hp1":"010-7471-7175","postcode":"03745","addr1":"서울 서대문구 독립문로12나길 32","addr2":"202호","addr3":" (천연동)","msg":"문 앞에 놓고 문자 주세요~"},"finished":false}]';
         try {
           const jsondata = JSON.parse(data);
           return jsondata;
@@ -79,6 +81,22 @@
           console.error(err);
           return [];
         }
+      }
+
+      function validateData(result) {
+        console.log("!!!");
+        pendingResolver?.(result);
+      }
+
+      async function waitValidationData() {
+        return new Promise(resolve => {
+          pendingResolver = resolve;
+          window.dispatchEvent(new CustomEvent("formValidation"));
+        });
+      }
+
+      function prepareOrder() {
+        return waitValidationData();
       }
     </script>
   </body>

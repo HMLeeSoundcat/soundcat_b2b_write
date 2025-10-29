@@ -93,6 +93,7 @@
     유형: undefined,
   });
   let 선택상자선택항목: number = $state(-1);
+  let 직접입력선택상자: HTMLElement | undefined = $state();
 
   let 품절팝업열림: boolean = $state(false);
   let 품절팝업내용: HTMLElement | undefined = $state();
@@ -203,7 +204,7 @@
         break;
       case "공급단가":
         품목리스트[인덱스].productInfo.dome_price = 숫자값;
-        품목리스트[인덱스].productInfo.margin = 계산_마진(Number(품목리스트[인덱스].productInfo.sell_price), 숫자값);
+        품목리스트[인덱스].productInfo.margin = 계산_마진(Number(품목리스트[인덱스].productInfo.sell_price), 숫자값) || 0;
         break;
       case "마진":
         품목리스트[인덱스].productInfo.margin = 숫자값;
@@ -271,9 +272,9 @@
   }
 
   function 선택상자검색항목선택(e: KeyboardEvent) {
+    if (!(선택상자호출자.품목 && 선택상자호출자.요소)) return;
     if (e.key == "Enter") {
       e.preventDefault();
-      if (!(선택상자호출자.품목 && 선택상자호출자.요소)) return;
       if (선택상자선택항목 >= 0) {
         선택상자요소배열[선택상자선택항목].click();
       } else {
@@ -283,9 +284,19 @@
       }
       선택상자호출자.요소.blur();
     }
+    if (e.key == "Tab") {
+      if (선택상자선택항목 >= 0) {
+        선택상자요소배열[선택상자선택항목].click();
+      } else {
+        선택상자호출자.품목.productInfo.sell_price = 0;
+        선택상자호출자.품목.productInfo.PROD_CD = "etc_001";
+        선택상자열림 = false;
+      }
+    }
   }
 
   function 선택상자검색(e: Event) {
+    if (!선택상자열림) 선택상자열림 = true;
     const 검색된항목 = 선택상자항목.findIndex((x: 임시배열타입) => {
       if (선택상자호출자.유형 == "브랜드") {
         return x.brand?.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase());
@@ -294,6 +305,9 @@
       }
     });
     선택상자선택항목 = 검색된항목;
+    if (!(e.currentTarget as HTMLInputElement).value) {
+      선택상자선택항목 = -1;
+    }
   }
 
   function 선택상자닫기(e: Event) {
@@ -446,6 +460,9 @@
       }
 
       선택상자열림 = false;
+    }
+    function escapeRemoverRegex(string: string) {
+      return string.replace(/[\r\n\t]+/g, "");
     }
   }
 
@@ -712,6 +729,8 @@
           acc: {
             status: boolean;
             reason: string[];
+            warning: boolean;
+            warning_reason: string[];
           },
           cur: 품목리스트항목타입
         ) => {
@@ -721,17 +740,39 @@
               const deliveryInfo = Object.keys(cur[item as keyof 품목리스트항목타입]);
               deliveryInfo.forEach((deliveryInfoItem: string) => {
                 const 값 = cur.deliveryInfo[deliveryInfoItem as keyof 배송정보타입];
-                if (!값 && true) {
+                if (!값 && ["name", "hp1", "postcode", "addr1", "addr2"].includes(deliveryInfoItem)) {
+                  acc.status = false;
+                  acc.reason.push(deliveryInfoItem);
+                }
+              });
+            } else if (item == "productInfo") {
+              const productInfo = Object.keys(cur[item as keyof 품목리스트항목타입]);
+              productInfo.forEach((productInfoItem: string) => {
+                const 값 = cur.productInfo[productInfoItem as keyof 제품정보타입];
+                if (!값) {
+                  if (["product", "PROD_CD", "qty"].includes(productInfoItem)) {
+                    acc.status = false;
+                    acc.reason.push(productInfoItem);
+                  }
+                  const nullishDataCheck = (productInfoItem == "margin" && !cur.productInfo.dome_price) || (productInfoItem == "dome_price" && !cur.productInfo.margin);
+                  if (nullishDataCheck) {
+                    acc.warning = true;
+                    acc.warning_reason.push(productInfoItem);
+                  }
                 }
               });
             }
           });
+          return acc;
         },
         {
           status: true,
           reason: [],
+          warning: false,
+          warning_reason: [],
         }
       );
+      console.log(결과);
     } else {
     }
 
@@ -794,7 +835,11 @@
   });
 
   $effect(() => {
-    if (선택상자선택항목 >= 0) 선택상자요소배열[선택상자선택항목]?.scrollIntoView({ block: "end" });
+    if (선택상자선택항목 >= 0) {
+      선택상자요소배열[선택상자선택항목]?.scrollIntoView({ block: "end" });
+    } else {
+      직접입력선택상자?.scrollIntoView({ block: "start" });
+    }
   });
   $effect(() => {
     //@ts-ignore
@@ -1006,7 +1051,7 @@
                 <div>
                   <label
                     for="id_{인덱스}_product"
-                    class="app_label block">품목명 <span style="font-weight:normal; font-size: 0.9em">(찾는 품목이 없는 경우 선택 없이 진행 가능)</span></label>
+                    class="app_label block">품목명 <span style="font-weight:normal; font-size: 0.9em">(찾는 품목이 없는 경우 직접 입력하여 진행 가능)</span></label>
                 </div>
                 <input
                   type="text"
@@ -1175,6 +1220,20 @@
       bind:this={선택상자}
       transition:fly={{ y: -10, duration: 100 }}>
       <ul>
+        <li>
+          <button
+            type="button"
+            class:searched={선택상자선택항목 == -1}
+            onclick={() => {
+              if (선택상자호출자 && 선택상자호출자.품목) {
+                선택상자호출자.품목.productInfo.sell_price = 0;
+                선택상자호출자.품목.productInfo.PROD_CD = "etc_001";
+                선택상자열림 = false;
+                if (선택상자호출자.요소) (선택상자호출자.요소 as HTMLInputElement).select();
+              }
+            }}
+            bind:this={직접입력선택상자}><i>직접입력</i></button>
+        </li>
         {#each 선택상자항목 as 선택항목, 인덱스}
           <li>
             <button
