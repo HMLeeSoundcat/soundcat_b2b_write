@@ -640,6 +640,7 @@
 
     try {
       엑셀데이터 = await parseExcelWithWorker(파일);
+      console.log(엑셀데이터);
     } catch (err) {
       error = (err as Error).message;
     } finally {
