@@ -95,8 +95,9 @@
         });
       }
 
-      function prepareOrder() {
-        return waitValidationData();
+      async function prepareOrder() {
+        const result = await waitValidationData();
+        console.log(result);
       }
     </script>
   </body>
