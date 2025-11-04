@@ -16,6 +16,7 @@
     productInfo: 제품정보타입;
     deliveryInfo: 배송정보타입;
     collapsed: boolean;
+    failed: boolean;
   };
 
   type 제품정보타입 = {
@@ -220,7 +221,7 @@
   const isHTMLElement = (element: any) => element instanceof HTMLElement || element instanceof HTMLInputElement;
 
   function 선택상자열기(품목: 품목리스트항목타입, 유형: string, 요소: HTMLElement, 인덱스: number) {
-    window.removeEventListener("click", 선택상자닫기);
+    window.removeEventListener("pointerdown", 선택상자닫기);
     요소.removeEventListener("input", 선택상자검색);
     요소.removeEventListener("keydown", 선택상자검색항목선택);
     선택상자호출자 = {
@@ -265,7 +266,7 @@
       선택상자조정();
       선택상자열림 = true;
       선택상자선택항목 = 선택상자항목.findIndex(x => x.product == (요소 as HTMLInputElement).value || x.brand == (요소 as HTMLInputElement).value);
-      window.addEventListener("click", 선택상자닫기);
+      window.addEventListener("pointerdown", 선택상자닫기);
       요소.addEventListener("input", 선택상자검색);
       요소.addEventListener("keydown", 선택상자검색항목선택);
     }
@@ -486,6 +487,7 @@
         : {
             uuid: crypto.randomUUID(),
             collapsed: false,
+            failed: false,
             productInfo: {
               itemType: 0,
               brand: undefined,
@@ -579,9 +581,7 @@
       },
     });
 
-    return new Promise((resolve, reject) => {
-      resolve(swalpopup);
-    });
+    return swalpopup;
   }
 
   async function 우편번호검색(품목: 품목리스트항목타입) {
@@ -665,6 +665,7 @@
       return {
         uuid: crypto.randomUUID(),
         collapsed: false,
+        failed: false,
         productInfo: {
           product: 줄[품목명],
           PROD_CD: "etc_001",
@@ -715,26 +716,28 @@
     }
   }
 
-  function 유효성검사() {
-    let 검사결과;
-    let 자세한내용;
+  async function 유효성검사() {
+    let 검사결과: number = 1;
+    let 자세한내용 = "";
     if (!배송형태) {
-      검사결과 = false;
+      검사결과 = 0;
       자세한내용 = "배송형태가 선택되지 않았습니다.";
     } else if (!품목리스트.length) {
-      검사결과 = false;
+      검사결과 = 0;
       자세한내용 = "품목 리스트가 존재하지 않습니다.";
     } else if (배송형태 && ["대리배송", "퀵착불", "익일수령택배"].includes(배송형태)) {
       const 결과 = 품목리스트.reduce(
         (
           acc: {
             status: boolean;
-            reason: string[];
+            reason: string[][];
             warning: boolean;
-            warning_reason: string[];
+            warning_reason: string[][];
           },
-          cur: 품목리스트항목타입
+          cur: 품목리스트항목타입,
+          index: number
         ) => {
+          if (index == 0) cur.failed = false;
           const keys = Object.keys(cur);
           keys.forEach((item: string) => {
             if (item == "deliveryInfo") {
@@ -743,23 +746,9 @@
                 const 값 = cur.deliveryInfo[deliveryInfoItem as keyof 배송정보타입];
                 if (!값 && ["name", "hp1", "postcode", "addr1", "addr2"].includes(deliveryInfoItem)) {
                   acc.status = false;
-                  acc.reason.push(deliveryInfoItem);
-                }
-              });
-            } else if (item == "productInfo") {
-              const productInfo = Object.keys(cur[item as keyof 품목리스트항목타입]);
-              productInfo.forEach((productInfoItem: string) => {
-                const 값 = cur.productInfo[productInfoItem as keyof 제품정보타입];
-                if (!값) {
-                  if (["product", "PROD_CD", "qty"].includes(productInfoItem)) {
-                    acc.status = false;
-                    acc.reason.push(productInfoItem);
-                  }
-                  const nullishDataCheck = (productInfoItem == "margin" && !cur.productInfo.dome_price) || (productInfoItem == "dome_price" && !cur.productInfo.margin);
-                  if (nullishDataCheck) {
-                    acc.warning = true;
-                    acc.warning_reason.push(productInfoItem);
-                  }
+                  if (!acc.reason[index]) acc.reason[index] = [];
+                  acc.reason[index].push(deliveryInfoItem);
+                  cur.failed = true;
                 }
               });
             }
@@ -773,12 +762,70 @@
           warning_reason: [],
         }
       );
-      console.log(결과);
-    } else {
+      if (결과.status == false) 검사결과 = 0;
+    }
+
+    const 품목정보결과 = 품목리스트.reduce(
+      (
+        acc: {
+          status: boolean;
+          reason: string[][];
+          warning: boolean;
+          warning_reason: string[][];
+        },
+        cur: 품목리스트항목타입,
+        index: number
+      ) => {
+        const keys = Object.keys(cur);
+        keys.forEach((item: string) => {
+          if (item == "productInfo") {
+            const productInfo = Object.keys(cur[item as keyof 품목리스트항목타입]);
+            productInfo.forEach((productInfoItem: string) => {
+              const 값 = cur.productInfo[productInfoItem as keyof 제품정보타입];
+              if (!값) {
+                if (["product", "PROD_CD", "qty"].includes(productInfoItem)) {
+                  acc.status = false;
+                  if (!acc.reason[index]) acc.reason[index] = [];
+                  acc.reason[index].push(productInfoItem);
+                  cur.failed = true;
+                }
+                const nullishDataCheck = (productInfoItem == "margin" && !cur.productInfo.dome_price) || (productInfoItem == "dome_price" && !cur.productInfo.margin);
+                if (nullishDataCheck) {
+                  acc.warning = true;
+                  if (!acc.warning_reason[index]) acc.warning_reason[index] = [];
+                  acc.warning_reason[index].push(productInfoItem);
+                }
+              }
+            });
+          }
+        });
+        return acc;
+      },
+      {
+        status: true,
+        reason: [],
+        warning: false,
+        warning_reason: [],
+      }
+    );
+    if (품목정보결과.status == false) 검사결과 = 0;
+    if (검사결과 > 0 && 품목정보결과.warning) 검사결과 = 2;
+
+    if (검사결과 == 0) {
+      자세한내용 = "필수 입력란이 누락되었습니다. 내용을 확인해주세요.";
+    }
+    if (검사결과 == 2) 자세한내용 = "일부 항목이 누락되었습니다. 누락되었어도 진행이 가능하나 담당자 임의로 처리될 수 있는 점 확인 부탁드립니다.";
+
+    if (검사결과 == 0) {
+      const 팝업 = Swal.fire({
+        title: "입력란이 누락되어 있습니다.",
+        text: 자세한내용,
+        confirmButtonText: "확인",
+      });
     }
 
     //@ts-ignore
-    if (window.validateData) window.validateData(검사결과, 자세한내용);
+    if (window.validateData) window.validateData(검사결과);
   }
 
   onMount(async () => {
@@ -826,6 +873,16 @@
     if (window.getOrderType) 발주서상태 = window.getOrderType();
 
     window.addEventListener("formValidation", 유효성검사);
+    window.addEventListener("autosaveload", e => {
+      //@ts-ignore
+      const json = e.detail.json;
+      try {
+        const parsed = JSON.parse(json);
+        품목리스트 = [...parsed];
+      } catch (err) {
+        console.error(err);
+      }
+    });
   });
 
   onDestroy(() => {
@@ -926,6 +983,7 @@
                   <input
                     type="text"
                     id="id_{인덱스}_name"
+                    class:failed={품목.failed && !품목.deliveryInfo.name}
                     bind:value={품목.deliveryInfo.name} />
                 </div>
                 <div
@@ -939,6 +997,7 @@
                   <input
                     type="text"
                     id="id_{인덱스}_hp1"
+                    class:failed={품목.failed && !품목.deliveryInfo.hp1}
                     bind:value={품목.deliveryInfo.hp1} />
                 </div>
                 <div
@@ -988,6 +1047,7 @@
                   <input
                     type="text"
                     placeholder="우편번호"
+                    class:failed={품목.failed && !품목.deliveryInfo.postcode}
                     bind:value={품목.deliveryInfo.postcode} />
                 </div>
                 <div
@@ -1004,6 +1064,7 @@
                   <input
                     type="text"
                     placeholder="기본주소"
+                    class:failed={품목.failed && !품목.deliveryInfo.addr1}
                     bind:value={품목.deliveryInfo.addr1} />
                 </div>
                 <div
@@ -1013,6 +1074,7 @@
                     bind:this={우편번호상세입력란[품목.uuid]}
                     type="text"
                     placeholder="상세주소"
+                    class:failed={품목.failed && !품목.deliveryInfo.addr2}
                     bind:value={품목.deliveryInfo.addr2} />
                 </div>
                 <div
@@ -1058,6 +1120,7 @@
                   type="text"
                   placeholder="브랜드를 선택하지 않아도 품목 선택 가능"
                   id="id_{인덱스}_product"
+                  class:failed={품목.failed && !품목.productInfo.product}
                   bind:this={품목명입력란[품목.uuid]}
                   bind:value={품목.productInfo.product}
                   onfocus={e => 선택상자열기(품목, "품목명", e.currentTarget, 인덱스)}
@@ -1078,6 +1141,7 @@
                   <input
                     type="text"
                     id="id_{인덱스}_prop"
+                    class:failed={품목.failed && 품목.productInfo.useprop && !품목.productInfo.prop}
                     bind:value={품목.productInfo.prop} />
                 </div>
               {/if}
@@ -1134,6 +1198,7 @@
                     type="text"
                     class="app_text_input"
                     data-label="개"
+                    class:failed={품목.failed && !품목.productInfo.qty}
                     id="id_{인덱스}_qty"
                     value={new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty)))}
                     oninput={e => {
@@ -1508,6 +1573,10 @@
     padding: 0.5em;
   }
 
+  input.failed {
+    background: #f002;
+  }
+
   hr {
     border: none;
     border-top: 1px solid #ddd;
@@ -1618,6 +1687,7 @@
   .excelWindow select {
     width: 100%;
   }
+
   @media screen and (max-width: 640px) {
     .app_row .app_col {
       flex-basis: 100%;
