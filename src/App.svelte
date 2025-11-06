@@ -74,6 +74,7 @@
     brand: string | undefined;
     soldout: number | undefined;
     software: string | undefined;
+    stock_level?: number;
   };
 
   type 선택상자호출자타입 = {
@@ -241,7 +242,7 @@
       const items = (전체품목 as 전체품목리스트)[key];
       if (Array.isArray(items)) {
         선택상자항목 = items.map((x: 개별품목정보): 임시배열타입 => {
-          return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock };
+          return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock, stock_level: x.stock_level };
         });
       } else {
         선택상자항목 = [];
@@ -254,7 +255,7 @@
           임시배열 = [
             ...임시배열,
             ...items.map((x: 개별품목정보) => {
-              return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock };
+              return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock, stock_level: x.stock_level };
             }),
           ];
           선택상자항목 = 임시배열;
@@ -1298,7 +1299,7 @@
                 if (선택상자호출자.요소) (선택상자호출자.요소 as HTMLInputElement).select();
               }
             }}
-            bind:this={직접입력선택상자}><i>직접입력</i></button>
+            bind:this={직접입력선택상자}><span class="selectbox-text"><i>직접입력</i></span></button>
         </li>
         {#each 선택상자항목 as 선택항목, 인덱스}
           <li>
@@ -1307,7 +1308,24 @@
               class:searched={선택상자선택항목 == 인덱스}
               onclick={() => 선택상자항목선택(선택항목)}
               bind:this={선택상자요소배열[인덱스]}>
-              {선택상자호출자.유형 == "브랜드" ? 선택항목.brand : 선택항목.product}{typeof 선택항목 != "string" && 선택항목.soldout ? " (품절)" : ""}
+              <span class="selectbox-text">{선택상자호출자.유형 == "브랜드" ? 선택항목.brand : 선택항목.product}{typeof 선택항목 != "string" && 선택항목.soldout ? " (품절)" : ""}</span>
+              {#if 선택항목.stock_level}
+                <span class="stock_level">
+                  <span
+                    class="stock_level_active"
+                    data-stock-level={선택항목.stock_level ?? 0}>
+                    {#each new Array(선택항목.stock_level)}
+                      <span class="stock_level_bar"></span>
+                    {/each}
+                  </span>
+                  <span class="stock_level_bg">
+                    <span class="stock_level_bar"></span>
+                    <span class="stock_level_bar"></span>
+                    <span class="stock_level_bar"></span>
+                    <span class="stock_level_bar"></span>
+                  </span>
+                </span>
+              {/if}
             </button>
           </li>
         {:else}
@@ -1606,10 +1624,19 @@
     background-color: transparent;
     font-size: 1em;
     margin: 0;
-    display: block;
+    display: flex;
     width: 100%;
     border: none;
     text-align: left;
+  }
+  .selectbox-text {
+    flex-grow: 1;
+    margin: 0;
+    padding: 0;
+  }
+  .stock_level * {
+    margin: 0;
+    padding: 0;
   }
   .select_box ul li :is(button:hover, button.searched) {
     background-color: #eee;
@@ -1618,6 +1645,52 @@
     padding: 0.5em;
     color: #999;
     font-style: italic;
+  }
+  .stock_level {
+    position: relative;
+    flex-basis: 2em;
+  }
+
+  .stock_level_bg,
+  .stock_level_active {
+    top: 50%;
+    height: 80%;
+    max-height: 20px;
+    display: flex;
+    transform: translateY(-50%);
+    gap: 1px;
+  }
+
+  .stock_level_bg {
+    position: relative;
+  }
+
+  .stock_level_active {
+    position: absolute;
+    left: 0;
+  }
+
+  .stock_level_active[data-stock-level="1"] {
+    --stock-level-color: red;
+  }
+
+  .stock_level_active[data-stock-level="2"] {
+    --stock-level-color: orange;
+  }
+
+  .stock_level_active[data-stock-level="3"] {
+    --stock-level-color: yellow;
+  }
+
+  .stock_level_active[data-stock-level="4"] {
+    --stock-level-color: green;
+  }
+
+  .stock_level_bar {
+    height: 100%;
+    width: 4px;
+    background-color: var(--stock-level-color, #0002);
+    border-radius: 2px;
   }
 
   .app_footer {
