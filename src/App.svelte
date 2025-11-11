@@ -94,6 +94,9 @@
     품목: undefined,
     유형: undefined,
   });
+  let 선택상자필터: 임시배열타입[]|undefined = $state();
+  $inspect(선택상자필터);
+  
   let 선택상자선택항목: number = $state(-1);
   let 직접입력선택상자: HTMLElement | undefined = $state();
 
@@ -132,6 +135,21 @@
   let 컨테이너 = $state();
 
   let 전체품목: 전체품목리스트 = $state({} as 전체품목리스트);
+  let 검색상자전체품목: 임시배열타입[]|undefined = $derived.by(()=>{
+      let 임시배열:임시배열타입[]|undefined = undefined;
+      Object.keys(전체품목).forEach(각브랜드 => {
+        const items = 전체품목[각브랜드];
+        if (Array.isArray(items)) {
+          임시배열 = [
+            ...임시배열?임시배열:[],
+            ...items.map((x: 개별품목정보) => {
+              return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock, stock_level: x.stock_level };
+            }),
+          ];
+        }
+      });
+      return 임시배열?임시배열:undefined;
+  });
 
   const 배송형태종류 = ["익일수령택배", "방문수령", "퀵착불", "퀵선불", "대리배송", "전자배송", ""] as const;
   let 배송형태: 배송형태종류타입 | undefined = $state();
@@ -221,7 +239,7 @@
 
   const isHTMLElement = (element: any) => element instanceof HTMLElement || element instanceof HTMLInputElement;
 
-  function 선택상자열기(품목: 품목리스트항목타입, 유형: string, 요소: HTMLElement, 인덱스: number) {
+  function 선택상자열기(e:Event, 품목: 품목리스트항목타입, 유형: string, 요소: HTMLElement, 인덱스: number) {
     window.removeEventListener("pointerdown", 선택상자닫기);
     요소.removeEventListener("input", 선택상자검색);
     요소.removeEventListener("keydown", 선택상자검색항목선택);
@@ -248,19 +266,7 @@
         선택상자항목 = [];
       }
     } else {
-      let 임시배열: any[] = [];
-      Object.keys(전체품목).forEach(각브랜드 => {
-        const items = 전체품목[각브랜드];
-        if (Array.isArray(items)) {
-          임시배열 = [
-            ...임시배열,
-            ...items.map((x: 개별품목정보) => {
-              return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock, stock_level: x.stock_level };
-            }),
-          ];
-          선택상자항목 = 임시배열;
-        }
-      });
+      선택상자항목 = 검색상자전체품목?검색상자전체품목:[];
     }
 
     if (유형) {
@@ -271,12 +277,17 @@
       요소.addEventListener("input", 선택상자검색);
       요소.addEventListener("keydown", 선택상자검색항목선택);
     }
+
+    선택상자필터 = undefined;
+    if (e) 선택상자검색(e);
   }
 
   function 선택상자검색항목선택(e: KeyboardEvent) {
     if (!(선택상자호출자.품목 && 선택상자호출자.요소)) return;
-    if (e.key == "Enter") {
-      e.preventDefault();
+    
+    function 검색후조치 () {
+      if (!(선택상자호출자.품목 && 선택상자호출자.요소)) return;
+      
       if (선택상자선택항목 >= 0) {
         선택상자요소배열[선택상자선택항목].click();
       } else {
@@ -284,28 +295,52 @@
         선택상자호출자.품목.productInfo.PROD_CD = "etc_001";
         선택상자열림 = false;
       }
-      선택상자호출자.요소.blur();
     }
-    if (e.key == "Tab") {
-      if (선택상자선택항목 >= 0) {
-        선택상자요소배열[선택상자선택항목].click();
-      } else {
-        선택상자호출자.품목.productInfo.sell_price = 0;
-        선택상자호출자.품목.productInfo.PROD_CD = "etc_001";
-        선택상자열림 = false;
-      }
+
+    switch (e.key) {
+      case "Tab":
+        검색후조치();
+        break;
+      case "Enter":
+        e.preventDefault();
+        검색후조치();
+        선택상자호출자.요소.blur();
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        선택상자선택항목 = Math.max(-1, 선택상자선택항목 - 1);
+        break;
+      case "ArrowDown":
+        e.preventDefault();
+        선택상자선택항목 = Math.min((Array.isArray(선택상자필터)?선택상자필터.length:선택상자항목.length) - 1, 선택상자선택항목 + 1);
+        break;
     }
   }
 
   function 선택상자검색(e: Event) {
     if (!선택상자열림) 선택상자열림 = true;
-    const 검색된항목 = 선택상자항목.findIndex((x: 임시배열타입) => {
-      if (선택상자호출자.유형 == "브랜드") {
+    let 검색된항목;
+
+    if (선택상자호출자.유형 == "브랜드") {
+      선택상자필터 = 선택상자항목.filter((x: 임시배열타입) => {
+        if (x.brand?.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase())) return true;
+      })
+      검색된항목 = 선택상자필터.findIndex((x: 임시배열타입) => {
         return x.brand?.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase());
-      } else {
+      });
+    } else if (선택상자호출자.유형 == "품목명") {
+      선택상자필터 = 선택상자항목.filter((x: 임시배열타입) => {
+        if (x.product?.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase())) return true;
+      })
+      검색된항목 = 선택상자필터.findIndex((x: 임시배열타입) => {
         return x.product?.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase());
-      }
-    });
+      });
+    } else {
+      return;
+    }
+
+    if (!(e.currentTarget as HTMLInputElement).value) 선택상자필터 = undefined;
+
     선택상자선택항목 = 검색된항목;
     if (!(e.currentTarget as HTMLInputElement).value) {
       선택상자선택항목 = -1;
@@ -316,15 +351,19 @@
     if (!((isHTMLElement(e.target) && isHTMLElement(선택상자) && 선택상자.contains(e.target)) || (isHTMLElement(선택상자호출자.요소) && isHTMLElement(e.target) && 선택상자호출자.요소.contains(e.target)))) {
       선택상자열림 = false;
       window.removeEventListener("click", 선택상자닫기);
+      window.removeEventListener("pointerdown", 선택상자닫기);
     }
   }
 
   function 선택상자조정() {
-    if (!(선택상자호출자.요소 && 컨테이너 && isHTMLElement(컨테이너))) return;
-    const 호출자속성 = 선택상자호출자.요소.getBoundingClientRect();
-    컨테이너.style.setProperty("--selectbox_top", String(호출자속성.bottom));
-    컨테이너.style.setProperty("--selectbox_left", String(호출자속성.left));
-    컨테이너.style.setProperty("--selectbox_width", String(Math.max(호출자속성.width, 200)));
+    requestAnimationFrame(()=>{
+      if (!(선택상자호출자.요소 && 컨테이너 && isHTMLElement(컨테이너))) return;
+
+      const 호출자속성 = 선택상자호출자.요소.getBoundingClientRect();
+      컨테이너.style.setProperty("--selectbox_top", String(호출자속성.bottom));
+      컨테이너.style.setProperty("--selectbox_left", String(호출자속성.left));
+      컨테이너.style.setProperty("--selectbox_width", String(Math.max(호출자속성.width, 200)));
+    })
   }
 
   function 내용리셋(품목: 품목리스트항목타입) {
@@ -741,15 +780,37 @@
           if (index == 0) cur.failed = false;
           const keys = Object.keys(cur);
           keys.forEach((item: string) => {
-            if (item == "deliveryInfo") {
+            if (배송형태 && ["대리배송", "퀵착불", "익일수령택배"].includes(배송형태)) {
+              if (item == "deliveryInfo") {
               const deliveryInfo = Object.keys(cur[item as keyof 품목리스트항목타입]);
-              deliveryInfo.forEach((deliveryInfoItem: string) => {
-                const 값 = cur.deliveryInfo[deliveryInfoItem as keyof 배송정보타입];
-                if (!값 && ["name", "hp1", "postcode", "addr1", "addr2"].includes(deliveryInfoItem)) {
-                  acc.status = false;
-                  if (!acc.reason[index]) acc.reason[index] = [];
-                  acc.reason[index].push(deliveryInfoItem);
-                  cur.failed = true;
+                deliveryInfo.forEach((deliveryInfoItem: string) => {
+                  const 값 = cur.deliveryInfo[deliveryInfoItem as keyof 배송정보타입];
+                  if (!값 && ["name", "hp1", "postcode", "addr1", "addr2"].includes(deliveryInfoItem)) {
+                    acc.status = false;
+                    if (!acc.reason[index]) acc.reason[index] = [];
+                    acc.reason[index].push(deliveryInfoItem);
+                    cur.failed = true;
+                  }
+                });
+              }
+            }
+            if (item == "productInfo") {
+              const productInfo = Object.keys(cur[item as keyof 품목리스트항목타입]);
+              productInfo.forEach((productInfoItem: string) => {
+                const 값 = cur.productInfo[productInfoItem as keyof 제품정보타입];
+                if (!값) {
+                  if (["product", "PROD_CD", "qty"].includes(productInfoItem)) {
+                    acc.status = false;
+                    if (!acc.reason[index]) acc.reason[index] = [];
+                    acc.reason[index].push(productInfoItem);
+                    cur.failed = true;
+                  }
+                  const nullishDataCheck = (productInfoItem == "margin" && !cur.productInfo.dome_price) || (productInfoItem == "dome_price" && !cur.productInfo.margin);
+                  if (nullishDataCheck) {
+                    acc.warning = true;
+                    if (!acc.warning_reason[index]) acc.warning_reason[index] = [];
+                    acc.warning_reason[index].push(productInfoItem);
+                  }
                 }
               });
             }
@@ -764,53 +825,8 @@
         }
       );
       if (결과.status == false) 검사결과 = 0;
+      if (결과.status && 결과.warning) 검사결과 = 2;
     }
-
-    const 품목정보결과 = 품목리스트.reduce(
-      (
-        acc: {
-          status: boolean;
-          reason: string[][];
-          warning: boolean;
-          warning_reason: string[][];
-        },
-        cur: 품목리스트항목타입,
-        index: number
-      ) => {
-        const keys = Object.keys(cur);
-        keys.forEach((item: string) => {
-          if (item == "productInfo") {
-            const productInfo = Object.keys(cur[item as keyof 품목리스트항목타입]);
-            productInfo.forEach((productInfoItem: string) => {
-              const 값 = cur.productInfo[productInfoItem as keyof 제품정보타입];
-              if (!값) {
-                if (["product", "PROD_CD", "qty"].includes(productInfoItem)) {
-                  acc.status = false;
-                  if (!acc.reason[index]) acc.reason[index] = [];
-                  acc.reason[index].push(productInfoItem);
-                  cur.failed = true;
-                }
-                const nullishDataCheck = (productInfoItem == "margin" && !cur.productInfo.dome_price) || (productInfoItem == "dome_price" && !cur.productInfo.margin);
-                if (nullishDataCheck) {
-                  acc.warning = true;
-                  if (!acc.warning_reason[index]) acc.warning_reason[index] = [];
-                  acc.warning_reason[index].push(productInfoItem);
-                }
-              }
-            });
-          }
-        });
-        return acc;
-      },
-      {
-        status: true,
-        reason: [],
-        warning: false,
-        warning_reason: [],
-      }
-    );
-    if (품목정보결과.status == false) 검사결과 = 0;
-    if (검사결과 > 0 && 품목정보결과.warning) 검사결과 = 2;
 
     if (검사결과 == 0) {
       자세한내용 = "필수 입력란이 누락되었습니다. 내용을 확인해주세요.";
@@ -1103,7 +1119,7 @@
                   placeholder="브랜드"
                   id="id_{인덱스}_brand"
                   bind:value={품목.productInfo.brand}
-                  onfocus={e => 선택상자열기(품목, "브랜드", e.currentTarget, 인덱스)}
+                  onfocus={e => 선택상자열기(e, 품목, "브랜드", e.currentTarget, 인덱스)}
                   onblur={e => {
                     e.currentTarget.removeEventListener("input", 선택상자검색);
                     e.currentTarget.removeEventListener("keydown", 선택상자검색항목선택);
@@ -1124,7 +1140,7 @@
                   class:failed={품목.failed && !품목.productInfo.product}
                   bind:this={품목명입력란[품목.uuid]}
                   bind:value={품목.productInfo.product}
-                  onfocus={e => 선택상자열기(품목, "품목명", e.currentTarget, 인덱스)}
+                  onfocus={e => 선택상자열기(e, 품목, "품목명", e.currentTarget, 인덱스)}
                   onblur={e => {
                     e.currentTarget.removeEventListener("input", 선택상자검색);
                     e.currentTarget.removeEventListener("keydown", 선택상자검색항목선택);
@@ -1301,7 +1317,7 @@
             }}
             bind:this={직접입력선택상자}><span class="selectbox-text"><i>직접입력</i></span></button>
         </li>
-        {#each 선택상자항목 as 선택항목, 인덱스}
+        {#each Array.isArray(선택상자필터)?선택상자필터:선택상자항목 as 선택항목, 인덱스}
           <li>
             <button
               type="button"
