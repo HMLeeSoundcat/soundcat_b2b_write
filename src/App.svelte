@@ -94,9 +94,9 @@
     품목: undefined,
     유형: undefined,
   });
-  let 선택상자필터: 임시배열타입[]|undefined = $state();
+  let 선택상자필터: 임시배열타입[] | undefined = $state();
   $inspect(선택상자필터);
-  
+
   let 선택상자선택항목: number = $state(-1);
   let 직접입력선택상자: HTMLElement | undefined = $state();
 
@@ -135,20 +135,20 @@
   let 컨테이너 = $state();
 
   let 전체품목: 전체품목리스트 = $state({} as 전체품목리스트);
-  let 검색상자전체품목: 임시배열타입[]|undefined = $derived.by(()=>{
-      let 임시배열:임시배열타입[]|undefined = undefined;
-      Object.keys(전체품목).forEach(각브랜드 => {
-        const items = 전체품목[각브랜드];
-        if (Array.isArray(items)) {
-          임시배열 = [
-            ...임시배열?임시배열:[],
-            ...items.map((x: 개별품목정보) => {
-              return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock, stock_level: x.stock_level };
-            }),
-          ];
-        }
-      });
-      return 임시배열?임시배열:undefined;
+  let 검색상자전체품목: 임시배열타입[] | undefined = $derived.by(() => {
+    let 임시배열: 임시배열타입[] | undefined = undefined;
+    Object.keys(전체품목).forEach(각브랜드 => {
+      const items = 전체품목[각브랜드];
+      if (Array.isArray(items)) {
+        임시배열 = [
+          ...(임시배열 ? 임시배열 : []),
+          ...items.map((x: 개별품목정보) => {
+            return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock, stock_level: x.stock_level };
+          }),
+        ];
+      }
+    });
+    return 임시배열 ? 임시배열 : undefined;
   });
 
   const 배송형태종류 = ["익일수령택배", "방문수령", "퀵착불", "퀵선불", "대리배송", "전자배송", ""] as const;
@@ -239,7 +239,7 @@
 
   const isHTMLElement = (element: any) => element instanceof HTMLElement || element instanceof HTMLInputElement;
 
-  function 선택상자열기(e:Event, 품목: 품목리스트항목타입, 유형: string, 요소: HTMLElement, 인덱스: number) {
+  function 선택상자열기(e: Event, 품목: 품목리스트항목타입, 유형: string, 요소: HTMLElement, 인덱스: number) {
     window.removeEventListener("pointerdown", 선택상자닫기);
     요소.removeEventListener("input", 선택상자검색);
     요소.removeEventListener("keydown", 선택상자검색항목선택);
@@ -266,7 +266,7 @@
         선택상자항목 = [];
       }
     } else {
-      선택상자항목 = 검색상자전체품목?검색상자전체품목:[];
+      선택상자항목 = 검색상자전체품목 ? 검색상자전체품목 : [];
     }
 
     if (유형) {
@@ -284,10 +284,10 @@
 
   function 선택상자검색항목선택(e: KeyboardEvent) {
     if (!(선택상자호출자.품목 && 선택상자호출자.요소)) return;
-    
-    function 검색후조치 () {
+
+    function 검색후조치() {
       if (!(선택상자호출자.품목 && 선택상자호출자.요소)) return;
-      
+
       if (선택상자선택항목 >= 0) {
         선택상자요소배열[선택상자선택항목].click();
       } else {
@@ -312,7 +312,7 @@
         break;
       case "ArrowDown":
         e.preventDefault();
-        선택상자선택항목 = Math.min((Array.isArray(선택상자필터)?선택상자필터.length:선택상자항목.length) - 1, 선택상자선택항목 + 1);
+        선택상자선택항목 = Math.min((Array.isArray(선택상자필터) ? 선택상자필터.length : 선택상자항목.length) - 1, 선택상자선택항목 + 1);
         break;
     }
   }
@@ -324,14 +324,14 @@
     if (선택상자호출자.유형 == "브랜드") {
       선택상자필터 = 선택상자항목.filter((x: 임시배열타입) => {
         if (x.brand?.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase())) return true;
-      })
+      });
       검색된항목 = 선택상자필터.findIndex((x: 임시배열타입) => {
         return x.brand?.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase());
       });
     } else if (선택상자호출자.유형 == "품목명") {
       선택상자필터 = 선택상자항목.filter((x: 임시배열타입) => {
         if (x.product?.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase())) return true;
-      })
+      });
       검색된항목 = 선택상자필터.findIndex((x: 임시배열타입) => {
         return x.product?.toLowerCase().includes((e.currentTarget as HTMLInputElement).value.toLowerCase());
       });
@@ -356,14 +356,14 @@
   }
 
   function 선택상자조정() {
-    requestAnimationFrame(()=>{
+    requestAnimationFrame(() => {
       if (!(선택상자호출자.요소 && 컨테이너 && isHTMLElement(컨테이너))) return;
 
       const 호출자속성 = 선택상자호출자.요소.getBoundingClientRect();
       컨테이너.style.setProperty("--selectbox_top", String(호출자속성.bottom));
       컨테이너.style.setProperty("--selectbox_left", String(호출자속성.left));
       컨테이너.style.setProperty("--selectbox_width", String(Math.max(호출자속성.width, 200)));
-    })
+    });
   }
 
   function 내용리셋(품목: 품목리스트항목타입) {
@@ -782,7 +782,7 @@
           keys.forEach((item: string) => {
             if (배송형태 && ["대리배송", "퀵착불", "익일수령택배"].includes(배송형태)) {
               if (item == "deliveryInfo") {
-              const deliveryInfo = Object.keys(cur[item as keyof 품목리스트항목타입]);
+                const deliveryInfo = Object.keys(cur[item as keyof 품목리스트항목타입]);
                 deliveryInfo.forEach((deliveryInfoItem: string) => {
                   const 값 = cur.deliveryInfo[deliveryInfoItem as keyof 배송정보타입];
                   if (!값 && ["name", "hp1", "postcode", "addr1", "addr2"].includes(deliveryInfoItem)) {
@@ -911,9 +911,9 @@
 
   $effect(() => {
     if (선택상자선택항목 >= 0) {
-      선택상자요소배열[선택상자선택항목]?.scrollIntoView({ block: "end" });
+      선택상자요소배열[선택상자선택항목]?.scrollIntoView({ block: "nearest" });
     } else {
-      직접입력선택상자?.scrollIntoView({ block: "start" });
+      직접입력선택상자?.scrollIntoView({ block: "nearest" });
     }
   });
   $effect(() => {
@@ -945,7 +945,7 @@
             onclick={() => (품목.collapsed = !품목.collapsed)}
             aria-label="품목 접기/펼치기"
             title="품목 접기/펼치기">{@html 품목.collapsed ? `<i class="fas fa-chevron-right"></i>` : `<i class="fas fa-chevron-down"></i>`}</button>
-          <span><strong>품목{인덱스 + 1}</strong></span>
+          <span class="item_title"><strong>품목{인덱스 + 1}</strong></span><span class="hori_div"></span>
           <div class="radio_vertical">
             <label class="app_radio">
               <input
@@ -1317,7 +1317,7 @@
             }}
             bind:this={직접입력선택상자}><span class="selectbox-text"><i>직접입력</i></span></button>
         </li>
-        {#each Array.isArray(선택상자필터)?선택상자필터:선택상자항목 as 선택항목, 인덱스}
+        {#each Array.isArray(선택상자필터) ? 선택상자필터 : 선택상자항목 as 선택항목, 인덱스}
           <li>
             <button
               type="button"
@@ -1487,6 +1487,17 @@
     position: sticky;
     top: 0;
     z-index: 2;
+  }
+
+  .item_title {
+    font-size: 1.3em;
+  }
+
+  .hori_div {
+    background: #0002;
+    width: 1px;
+    height: 2em;
+    display: block;
   }
 
   .app_body .app_header {
