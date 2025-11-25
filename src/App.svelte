@@ -11,7 +11,6 @@
   import { parseExcelWithWorker } from "./lib/parseExcel";
   import type { 개별품목정보, 배송정보타입, 배송형태종류타입, 선택상자호출자타입, 임시배열타입, 전체품목리스트, 제품정보타입, 품목리스트항목타입 } from "./type";
   import ExcelImport from "./ExcelImport.svelte";
-  import { readonly } from "svelte/store";
 
   let 선택상자열림 = $state(false);
   let 선택상자항목: 임시배열타입[] = $state([]);
@@ -122,13 +121,13 @@
     }
   }
 
-  async function 가격계산(e: Event | number, 품목: 품목리스트항목타입, 필드: string) {
+  async function 가격계산(e: number | string, 품목: 품목리스트항목타입, 필드: string) {
     const 가능한필드 = ["소비자가", "공급단가", "수량", "마진"];
     if (!가능한필드.includes(필드)) return;
 
-    const 요소 = typeof e == "object" && (e.currentTarget as HTMLInputElement);
-    const 값 = 요소 ? 요소.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1") : e;
-    if (요소) 요소.value = String(값);
+    const 값 = String(e)
+      .replace(/[^0-9.]/g, "")
+      .replace(/(\..*)\./g, "$1");
     const 숫자값 = parseInt(String(값)) || 0;
 
     const 인덱스 = 품목리스트.findIndex(요소 => 요소.uuid == 품목.uuid);
@@ -149,16 +148,16 @@
         품목리스트[인덱스].productInfo.dome_price = 계산_도매가(숫자값, Number(품목리스트[인덱스].productInfo.margin));
         break;
       case "공급단가":
-        품목리스트[인덱스].productInfo.dome_price = 숫자값;
-        품목리스트[인덱스].productInfo.margin = 계산_마진(Number(품목리스트[인덱스].productInfo.sell_price), 숫자값) || 0;
+        품목리스트[인덱스].productInfo.dome_price = Math.min(숫자값, 품목리스트[인덱스].productInfo.sell_price ?? 0);
+        품목리스트[인덱스].productInfo.margin = 계산_마진(Number(품목리스트[인덱스].productInfo.sell_price), 품목리스트[인덱스].productInfo.dome_price) || 0;
         break;
       case "마진":
-        품목리스트[인덱스].productInfo.margin = 숫자값;
-        품목리스트[인덱스].productInfo.dome_price = 계산_도매가(Number(품목리스트[인덱스].productInfo.sell_price), 숫자값);
+        품목리스트[인덱스].productInfo.margin = Math.min(100, Math.max(0, 숫자값));
+        품목리스트[인덱스].productInfo.dome_price = 계산_도매가(Number(품목리스트[인덱스].productInfo.sell_price), 품목리스트[인덱스].productInfo.margin);
         break;
       case "수량":
-        if (요소) 요소.value = 요소.value.replace(/[^0-9]/g, "");
         품목리스트[인덱스].productInfo.qty = Math.floor(숫자값);
+        break;
     }
     품목리스트[인덱스].productInfo.total_dome = Number(품목리스트[인덱스].productInfo.dome_price) * Number(품목리스트[인덱스].productInfo.qty);
   }
@@ -853,11 +852,8 @@
                   <input
                     type="text"
                     id="id_{인덱스}_dome_price"
-                    value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price))}
-                    disabled={품목.productInfo.itemType ? true : false}
-                    oninput={e => {
-                      가격계산(e, 품목, "공급단가");
-                    }} />
+                    bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price)), e => 가격계산(e, 품목, "공급단가")}
+                    disabled={품목.productInfo.itemType ? true : false} />
                 </div>
               </div>
               <div
@@ -878,10 +874,7 @@
                     class:failed={품목.failed && !품목.productInfo.qty}
                     disabled={품목.productInfo.itemType ? true : false}
                     id="id_{인덱스}_qty"
-                    value={new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty)))}
-                    oninput={e => {
-                      가격계산(e, 품목, "수량");
-                    }} />
+                    bind:value={() => new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty))), e => 가격계산(e, 품목, "수량")} />
                 </div>
               </div>
               <div
@@ -895,11 +888,8 @@
                 <input
                   type="text"
                   id="id_{인덱스}_margin"
-                  value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin))}
-                  disabled={품목.productInfo.itemType ? true : false}
-                  oninput={e => {
-                    가격계산(e, 품목, "마진");
-                  }} />
+                  bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin)), e => 가격계산(e, 품목, "마진")}
+                  disabled={품목.productInfo.itemType ? true : false} />
               </div>
               <div
                 class="app_col"
