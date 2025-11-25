@@ -834,8 +834,8 @@
                   <input
                     type="text"
                     id="id_{인덱스}_sell_price"
-                    value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price))}
-                    readonly />
+                    bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price)), e => 가격계산(e, 품목, "소비자가")}
+                    readonly={품목.productInfo.PROD_CD !== "etc_001"} />
                 </div>
               </div>
               <div
