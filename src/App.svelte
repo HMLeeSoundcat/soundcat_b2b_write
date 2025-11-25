@@ -4,85 +4,14 @@
 
 <script lang="ts">
   import { onDestroy, onMount, tick } from "svelte";
-  import { fade, fly } from "svelte/transition";
-  import { parseExcelWithWorker } from "./lib/parseExcel";
-  import type SwalType from "sweetalert2";
+  import { fly } from "svelte/transition";
   import Portal from "svelte-portal";
-
-  type 배송형태종류타입 = (typeof 배송형태종류)[number];
-
-  type 품목리스트항목타입 = {
-    uuid: string;
-    productInfo: 제품정보타입;
-    deliveryInfo: 배송정보타입;
-    collapsed: boolean;
-    failed: boolean;
-  };
-
-  type 제품정보타입 = {
-    itemType: 0 | 1 | 2;
-    brand: string | undefined;
-    product: string | undefined;
-    PROD_CD: string | undefined;
-    prop: string | undefined;
-    useprop: boolean;
-    sell_price: number | undefined;
-    dome_price: number | undefined;
-    qty: number | undefined;
-    margin: number | undefined;
-    total_dome: number | undefined;
-    soldout: boolean;
-  };
-
-  type 배송정보타입 = {
-    name: string | undefined;
-    hp1: string | undefined;
-    hp2: string | undefined;
-    addr1: string | undefined;
-    addr2: string | undefined;
-    addr3: string | undefined;
-    postcode: string | undefined;
-    msg: string | undefined;
-  };
-
-  type 전체품목리스트 = {
-    [key: string]: 개별품목정보[];
-  };
-
-  type 개별품목정보 = {
-    brand: string | undefined;
-    brand_kor: string | undefined;
-    PROD_CD: string | undefined;
-    product: string | undefined;
-    carton: string | undefined;
-    price: string | undefined;
-    software: string | undefined;
-    bypass_soldout: string | undefined;
-    soldout: string | undefined;
-    fixed_stock: string | undefined;
-    custom_option: string | undefined;
-    add_date: string | undefined;
-    whitelist_user: string | undefined;
-    blacklist_user: string | undefined;
-    zerostock: number | undefined;
-    stock_level: number | undefined;
-  };
-
-  type 임시배열타입 = {
-    product: string | undefined;
-    PROD_CD: string | undefined;
-    brand: string | undefined;
-    soldout: number | undefined;
-    software: string | undefined;
-    stock_level?: number;
-  };
-
-  type 선택상자호출자타입 = {
-    요소: HTMLElement | undefined;
-    인덱스: number;
-    품목: 품목리스트항목타입 | undefined;
-    유형: string | null | undefined;
-  };
+  import type SwalType from "sweetalert2";
+  import Selectbox from "./Selectbox.svelte";
+  import { parseExcelWithWorker } from "./lib/parseExcel";
+  import type { 개별품목정보, 배송정보타입, 배송형태종류타입, 선택상자호출자타입, 임시배열타입, 전체품목리스트, 제품정보타입, 품목리스트항목타입 } from "./type";
+  import ExcelImport from "./ExcelImport.svelte";
+  import { readonly } from "svelte/store";
 
   let 선택상자열림 = $state(false);
   let 선택상자항목: 임시배열타입[] = $state([]);
@@ -95,7 +24,6 @@
     유형: undefined,
   });
   let 선택상자필터: 임시배열타입[] | undefined = $state();
-  $inspect(선택상자필터);
 
   let 선택상자선택항목: number = $state(-1);
   let 직접입력선택상자: HTMLElement | undefined = $state();
@@ -122,13 +50,6 @@
     | null
     | undefined = $state();
 
-  let 엑셀파일선택: HTMLInputElement | undefined = $state();
-  let 엑셀로딩: boolean = $state(false);
-  let 엑셀데이터: any[] = $state([]);
-  let 엑셀데이터선택창: boolean = $state(false);
-  let 엑셀제목줄 = $state(-1);
-  let 엑셀양식 = $state([]);
-
   let 품목명입력란: Record<string, HTMLElement> = $state({});
 
   let 발주서상태: string = $state("대기");
@@ -143,7 +64,7 @@
         임시배열 = [
           ...(임시배열 ? 임시배열 : []),
           ...items.map((x: 개별품목정보) => {
-            return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock, stock_level: x.stock_level };
+            return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock, stock_level: x.stock_level, bypass_soldout: parseInt(x.bypass_soldout ?? "0") };
           }),
         ];
       }
@@ -155,6 +76,11 @@
   let 배송형태: 배송형태종류타입 | undefined = $state();
 
   let 품목리스트: 품목리스트항목타입[] = $state([]);
+
+  let 엑셀데이터: any[] = $state([]);
+  let 엑셀데이터선택창: boolean = $state(false);
+  let 엑셀파일선택: HTMLInputElement | undefined = $state();
+  let 엑셀로딩: boolean = $state(false);
 
   function 배송형태변경(e: Event) {
     const 값 = (e.target as HTMLSelectElement).value;
@@ -196,14 +122,14 @@
     }
   }
 
-  async function 가격계산(e: Event, 품목: 품목리스트항목타입, 필드: string) {
+  async function 가격계산(e: Event | number, 품목: 품목리스트항목타입, 필드: string) {
     const 가능한필드 = ["소비자가", "공급단가", "수량", "마진"];
     if (!가능한필드.includes(필드)) return;
 
-    const 요소 = e.currentTarget as HTMLInputElement;
-    const 값 = 요소.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
-    요소.value = 값;
-    const 숫자값 = Number(값) || 0;
+    const 요소 = typeof e == "object" && (e.currentTarget as HTMLInputElement);
+    const 값 = 요소 ? 요소.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1") : e;
+    if (요소) 요소.value = String(값);
+    const 숫자값 = parseInt(String(값)) || 0;
 
     const 인덱스 = 품목리스트.findIndex(요소 => 요소.uuid == 품목.uuid);
 
@@ -231,7 +157,7 @@
         품목리스트[인덱스].productInfo.dome_price = 계산_도매가(Number(품목리스트[인덱스].productInfo.sell_price), 숫자값);
         break;
       case "수량":
-        요소.value = 요소.value.replace(/[^0-9]/g, "");
+        if (요소) 요소.value = 요소.value.replace(/[^0-9]/g, "");
         품목리스트[인덱스].productInfo.qty = Math.floor(숫자값);
     }
     품목리스트[인덱스].productInfo.total_dome = Number(품목리스트[인덱스].productInfo.dome_price) * Number(품목리스트[인덱스].productInfo.qty);
@@ -240,7 +166,6 @@
   const isHTMLElement = (element: any) => element instanceof HTMLElement || element instanceof HTMLInputElement;
 
   function 선택상자열기(e: Event, 품목: 품목리스트항목타입, 유형: string, 요소: HTMLElement, 인덱스: number) {
-    window.removeEventListener("pointerdown", 선택상자닫기);
     요소.removeEventListener("input", 선택상자검색);
     요소.removeEventListener("keydown", 선택상자검색항목선택);
     선택상자호출자 = {
@@ -254,13 +179,13 @@
     const 브랜드 = 품목.productInfo.brand;
 
     if (유형 == "브랜드") {
-      선택상자항목 = Object.keys(전체품목).map(x => ({ brand: x, product: undefined, PROD_CD: undefined, software: undefined, soldout: undefined }));
+      선택상자항목 = Object.keys(전체품목).map(x => ({ brand: x, product: undefined, PROD_CD: undefined, software: undefined, soldout: undefined, bypass_soldout: undefined }));
     } else if (유형 == "품목명" && 브랜드) {
       const key = String(브랜드);
       const items = (전체품목 as 전체품목리스트)[key];
       if (Array.isArray(items)) {
         선택상자항목 = items.map((x: 개별품목정보): 임시배열타입 => {
-          return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock, stock_level: x.stock_level };
+          return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock, stock_level: x.stock_level, bypass_soldout: parseInt(x.bypass_soldout ?? "0") };
         });
       } else {
         선택상자항목 = [];
@@ -273,7 +198,6 @@
       선택상자조정();
       선택상자열림 = true;
       선택상자선택항목 = 선택상자항목.findIndex(x => x.product == (요소 as HTMLInputElement).value || x.brand == (요소 as HTMLInputElement).value);
-      window.addEventListener("pointerdown", 선택상자닫기);
       요소.addEventListener("input", 선택상자검색);
       요소.addEventListener("keydown", 선택상자검색항목선택);
     }
@@ -347,14 +271,6 @@
     }
   }
 
-  function 선택상자닫기(e: Event) {
-    if (!((isHTMLElement(e.target) && isHTMLElement(선택상자) && 선택상자.contains(e.target)) || (isHTMLElement(선택상자호출자.요소) && isHTMLElement(e.target) && 선택상자호출자.요소.contains(e.target)))) {
-      선택상자열림 = false;
-      window.removeEventListener("click", 선택상자닫기);
-      window.removeEventListener("pointerdown", 선택상자닫기);
-    }
-  }
-
   function 선택상자조정() {
     requestAnimationFrame(() => {
       if (!(선택상자호출자.요소 && 컨테이너 && isHTMLElement(컨테이너))) return;
@@ -364,147 +280,6 @@
       컨테이너.style.setProperty("--selectbox_left", String(호출자속성.left));
       컨테이너.style.setProperty("--selectbox_width", String(Math.max(호출자속성.width, 200)));
     });
-  }
-
-  function 내용리셋(품목: 품목리스트항목타입) {
-    품목.productInfo.product = "";
-    품목.productInfo.PROD_CD = "";
-    품목.productInfo.sell_price = 0;
-    품목.productInfo.dome_price = 0;
-    품목.productInfo.total_dome = 0;
-    품목.productInfo.useprop = false;
-    품목.productInfo.soldout = false;
-  }
-
-  async function 선택상자항목선택(선택항목: 임시배열타입) {
-    if (isHTMLElement(선택상자호출자.요소) && 선택상자호출자.품목) {
-      if (선택상자호출자.유형 == "브랜드") {
-        내용리셋(선택상자호출자.품목);
-        if (선택상자호출자.요소 instanceof HTMLInputElement) 선택상자호출자.품목.productInfo.brand = 선택항목.brand ?? "";
-
-        const uuid = 선택상자호출자.품목.uuid;
-        if (uuid) setTimeout(() => 품목명입력란[uuid]?.focus(), 100);
-      } else if (선택상자호출자.유형 == "품목명") {
-        let 실시간품절여부 = false;
-        try {
-          const response = await fetch("https://b2b.soundcat.com/page/get_stock.php", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              key: 선택항목.PROD_CD,
-              req: "soundcat",
-            }),
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            if (result.Errors) throw result.Errors;
-            if (!(result.Data.Result && result.Data.Result[0] && result.Data.Result[0].BAL_QTY && result.Data.Result[0].PROD_CD == 선택항목.PROD_CD)) 실시간품절여부 = true;
-          }
-        } catch (err) {
-          console.error(err);
-        }
-
-        if (선택항목.software == "0" && 발주서상태 != "선오더" && (선택항목.soldout || 실시간품절여부)) {
-          const 품절팝업결과 = (await 품절팝업()) as { isConfirmed: any; isDenied: any; dismiss: any };
-          if (품절팝업결과.isDenied) {
-            내용리셋(선택상자호출자.품목);
-            return;
-          }
-
-          if (품절팝업결과.isConfirmed) {
-            const result = 발주서유형변경("선오더");
-            if (result != "선오더") {
-              Swal.fire({
-                icon: "error",
-                title: "알림!",
-                text: "현재 선오더 발주 가능 기간이 아닙니다!",
-                confirmButtonText: "확인",
-              });
-              return false;
-            }
-          }
-        }
-
-        if (선택항목.software == "1" && 배송형태 != "전자배송") {
-          const swal = await Swal.fire({
-            title: "알림!",
-            html: `<!--.esd-popup .swal-html-container --><br />`,
-            confirmButtonColor: "#FDAB29",
-            icon: "warning",
-            confirmButtonText: "확인",
-            showCancelButton: true,
-            cancelButtonText: "다시 선택",
-            allowOutsideClick: () => {
-              const popup = Swal.getPopup();
-              popup?.classList.remove("animate__animated", "animate__fadeInDown", "animate__faster", "swal2-show");
-              setTimeout(() => {
-                popup?.classList.add("animate__animated", "animate__headShake");
-              });
-              setTimeout(() => {
-                popup?.classList.remove("animate__animated", "animate__headShake");
-              }, 500);
-              return false;
-            },
-            preConfirm: () => {
-              if (!전자배송팝업내용?.value) {
-                return Swal.showValidationMessage("수신 받을 이메일 주소를 입력하세요!");
-              } else {
-                try {
-                  //@ts-ignore
-                  CKEDITOR.instances.wr_content.setData("<p>수신 받을 이메일 주소: </p><p>" + (전자배송팝업내용.value.replaceAll("\n", "<br>") + "</p>"));
-                } catch {
-                  if (!document.querySelector("#wr_content")) return;
-                  (document.querySelector("#wr_content") as HTMLTextAreaElement).value = "수신 받을 이메일 주소:\n" + 전자배송팝업내용.value;
-                }
-              }
-            },
-            willOpen: () => {
-              전자배송팝업열림 = true;
-            },
-            customClass: {
-              container: "esd-popup",
-            },
-          });
-
-          if (swal.isConfirmed) {
-            //@ts-ignore
-            window.setDeliveryType("전자배송");
-            //@ts-ignore
-            window.wr_content_open(true);
-            document.querySelector("#use_content")?.setAttribute("checked", "checked");
-          } else {
-            return false;
-          }
-        }
-
-        선택상자호출자.품목.productInfo.brand = 선택항목.brand;
-        선택상자호출자.품목.productInfo.product = 선택항목.product;
-        if (선택상자호출자.요소 instanceof HTMLInputElement) 선택상자호출자.요소.value = 선택항목.product ?? "";
-        if (!선택상자호출자.품목.productInfo.brand) return;
-        const 인덱스 = 전체품목[선택상자호출자.품목.productInfo.brand].findIndex(x => x.product == 선택상자호출자.품목?.productInfo.product);
-
-        if (인덱스 != -1) {
-          선택상자호출자.품목.productInfo.sell_price = Number(전체품목[선택상자호출자.품목.productInfo.brand][인덱스].price);
-          if (전체품목[선택상자호출자.품목.productInfo.brand][인덱스].custom_option == "1") {
-            선택상자호출자.품목.productInfo.useprop = true;
-          } else {
-            선택상자호출자.품목.productInfo.useprop = false;
-          }
-          선택상자호출자.품목.productInfo.soldout = Boolean(선택항목.soldout);
-          선택상자호출자.품목.productInfo.dome_price = 선택상자호출자.품목.productInfo.sell_price * ((100 - (선택상자호출자.품목.productInfo.margin ?? 0)) / 100);
-          선택상자호출자.품목.productInfo.total_dome = 선택상자호출자.품목.productInfo.dome_price * (선택상자호출자.품목.productInfo.qty ?? 0);
-          선택상자호출자.품목.productInfo.PROD_CD = 전체품목[선택상자호출자.품목.productInfo.brand][인덱스].PROD_CD;
-        }
-      }
-
-      선택상자열림 = false;
-    }
-    function escapeRemoverRegex(string: string) {
-      return string.replace(/[\r\n\t]+/g, "");
-    }
   }
 
   function 품목추가(
@@ -556,74 +331,6 @@
     ];
   }
 
-  async function 품절팝업() {
-    let timerTimer: number;
-    let timerTimerTimer: number;
-    let dialog: HTMLElement | null;
-    let dangerbtn: HTMLButtonElement | null | undefined;
-
-    const swalpopup = await Swal.fire({
-      title: "품절 안내",
-      html: `<br />`,
-      confirmButtonColor: "#FDAB29",
-      icon: "warning",
-      confirmButtonText: "선오더로 변경",
-      showCancelButton: true,
-      cancelButtonText: "계속 진행",
-      showDenyButton: true,
-      denyButtonText: "다시 입력",
-      focusDeny: true,
-      allowOutsideClick: () => {
-        const popup = Swal.getPopup();
-        if (!popup) return false;
-        popup.classList.remove("animate__animated", "animate__fadeInDown", "animate__faster", "swal2-show");
-        setTimeout(() => {
-          popup.classList.add("animate__animated", "animate__headShake");
-        });
-        setTimeout(() => {
-          popup.classList.remove("animate__animated", "animate__headShake");
-        }, 500);
-        return false;
-      },
-      willOpen: () => {
-        품절팝업열림 = true;
-        dialog = document.querySelector(".soldoutDialog");
-        dangerbtn = dialog?.querySelector(".btn-danger-hold");
-        if (dialog && dangerbtn) {
-          dangerbtn.disabled = true;
-          dangerbtn.innerText = "계속 진행(10)";
-        }
-      },
-      didOpen: () => {
-        var timer = 9;
-        timerTimer = setInterval(() => {
-          if (dialog && dangerbtn) dangerbtn.innerText = `계속 진행(${timer})`;
-          timer--;
-        }, 1000);
-        timerTimerTimer = setTimeout(() => {
-          if (dialog && dangerbtn) {
-            dangerbtn.disabled = false;
-            dangerbtn.innerText = "계속 진행";
-            clearInterval(timerTimer);
-          }
-        }, 10000);
-      },
-      didClose: () => {
-        품절팝업열림 = false;
-        clearInterval(timerTimer);
-        clearTimeout(timerTimerTimer);
-      },
-      customClass: {
-        container: "soldoutDialog",
-        confirmButton: "order-1",
-        cancelButton: "btn-danger-hold order-2",
-        denyButton: "order-3",
-      },
-    });
-
-    return swalpopup;
-  }
-
   async function 우편번호검색(품목: 품목리스트항목타입) {
     우편번호검색열림[품목.uuid] = true;
     await tick();
@@ -670,92 +377,6 @@
     }).embed(우편번호검색상자[품목.uuid]);
   }
 
-  async function 엑셀파싱(e: Event) {
-    if (!엑셀파일선택) return;
-    const 파일 = 엑셀파일선택.files?.[0];
-    let error;
-    if (!파일) return;
-
-    엑셀로딩 = true;
-
-    try {
-      엑셀데이터 = await parseExcelWithWorker(파일);
-      console.log(엑셀데이터);
-    } catch (err) {
-      error = (err as Error).message;
-    } finally {
-      if (error) console.trace(error);
-      엑셀데이터선택창 = true;
-    }
-    엑셀파일선택.value = "";
-  }
-
-  function 엑셀자료입력(추가: boolean = false) {
-    const 고객명 = 엑셀양식[0];
-    const 전화번호1 = 엑셀양식[1];
-    const 전화번호2 = 엑셀양식[2];
-    const 우편번호 = 엑셀양식[3];
-    const 배송메시지 = 엑셀양식[4];
-    const 기본주소 = 엑셀양식[5];
-    const 상세주소 = 엑셀양식[6];
-    const 참고항목 = 엑셀양식[7];
-    const 품목명 = 엑셀양식[8];
-
-    const 추가될품목리스트: 품목리스트항목타입[] = 엑셀데이터.slice(엑셀제목줄 + 1).map((줄): 품목리스트항목타입 => {
-      return {
-        uuid: crypto.randomUUID(),
-        collapsed: false,
-        failed: false,
-        productInfo: {
-          product: 줄[품목명],
-          PROD_CD: "etc_001",
-          brand: "",
-          sell_price: 0,
-          dome_price: 0,
-          qty: 0,
-          margin: 0,
-          total_dome: 0,
-          prop: "",
-          useprop: false,
-          itemType: 0,
-          soldout: false,
-        },
-        deliveryInfo: {
-          name: 줄[고객명],
-          hp1: 줄[전화번호1],
-          hp2: 줄[전화번호2],
-          postcode: 줄[우편번호],
-          msg: 줄[배송메시지],
-          addr1: 줄[기본주소],
-          addr2: 줄[상세주소],
-          addr3: 줄[참고항목],
-        },
-      };
-    });
-
-    if (추가) {
-      품목리스트 = [...품목리스트, ...추가될품목리스트];
-    } else {
-      품목리스트 = [...추가될품목리스트];
-    }
-
-    엑셀양식 = [];
-    엑셀제목줄 = -1;
-    엑셀데이터 = [];
-    엑셀데이터선택창 = false;
-    엑셀로딩 = false;
-  }
-
-  function 발주서유형변경(유형: string) {
-    //@ts-ignore
-    if (window.setOrderType) {
-      //@ts-ignore
-      const result = window.setOrderType(유형);
-      발주서상태 = result;
-      return result;
-    }
-  }
-
   async function 유효성검사() {
     let 검사결과: number = 1;
     let 자세한내용 = "";
@@ -765,7 +386,7 @@
     } else if (!품목리스트.length) {
       검사결과 = 0;
       자세한내용 = "품목 리스트가 존재하지 않습니다.";
-    } else if (배송형태 && ["대리배송", "퀵착불", "익일수령택배"].includes(배송형태)) {
+    } else {
       const 결과 = 품목리스트.reduce(
         (
           acc: {
@@ -794,6 +415,7 @@
                 });
               }
             }
+
             if (item == "productInfo") {
               const productInfo = Object.keys(cur[item as keyof 품목리스트항목타입]);
               productInfo.forEach((productInfoItem: string) => {
@@ -843,6 +465,37 @@
 
     //@ts-ignore
     if (window.validateData) window.validateData(검사결과);
+  }
+
+  async function 엑셀파싱(e: Event) {
+    if (!엑셀파일선택) return;
+    const 파일 = 엑셀파일선택.files?.[0];
+    let error;
+    if (!파일) return;
+    엑셀로딩 = true;
+
+    try {
+      엑셀데이터 = await parseExcelWithWorker(파일);
+      console.log(엑셀데이터);
+    } catch (err) {
+      error = err as Error;
+    } finally {
+      if (error) console.trace(error);
+      엑셀데이터선택창 = true;
+    }
+    엑셀파일선택.value = "";
+  }
+
+  function 데모반영(e: Event, 품목: 품목리스트항목타입) {
+    const 값 = (e?.currentTarget as HTMLButtonElement)?.value;
+    if (parseInt(값)) {
+      품목.productInfo.margin = parseInt(String(값)) == 1 ? 40 : 50;
+      품목.productInfo.qty = 1;
+    } else {
+      품목.productInfo.margin = 0;
+      품목.productInfo.qty = 0;
+    }
+    가격계산(품목.productInfo.margin, 품목, "마진");
   }
 
   onMount(async () => {
@@ -922,9 +575,6 @@
   });
 </script>
 
-<svelte:window
-  onresize={선택상자조정}
-  onscroll={선택상자조정} />
 <div
   class="app_container"
   bind:this={컨테이너}>
@@ -952,6 +602,9 @@
                 type="radio"
                 id="id_{인덱스}_itemType1"
                 name="itemType_{인덱스}"
+                onchange={e => {
+                  데모반영(e, 품목);
+                }}
                 value={0}
                 bind:group={품목.productInfo.itemType} />
               <span>일반</span>
@@ -961,6 +614,9 @@
                 type="radio"
                 id="id_{인덱스}_itemType2"
                 name="itemType_{인덱스}"
+                onchange={e => {
+                  데모반영(e, 품목);
+                }}
                 value={1}
                 bind:group={품목.productInfo.itemType} />
               <span>데모(40%)</span>
@@ -970,6 +626,9 @@
                 type="radio"
                 id="id_{인덱스}_itemType3"
                 name="itemType_{인덱스}"
+                onchange={e => {
+                  데모반영(e, 품목);
+                }}
                 value={2}
                 bind:group={품목.productInfo.itemType} />
               <span>데모(50%)</span>
@@ -1195,6 +854,7 @@
                     type="text"
                     id="id_{인덱스}_dome_price"
                     value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price))}
+                    disabled={품목.productInfo.itemType ? true : false}
                     oninput={e => {
                       가격계산(e, 품목, "공급단가");
                     }} />
@@ -1216,6 +876,7 @@
                     class="app_text_input"
                     data-label="개"
                     class:failed={품목.failed && !품목.productInfo.qty}
+                    disabled={품목.productInfo.itemType ? true : false}
                     id="id_{인덱스}_qty"
                     value={new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty)))}
                     oninput={e => {
@@ -1235,6 +896,7 @@
                   type="text"
                   id="id_{인덱스}_margin"
                   value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin))}
+                  disabled={품목.productInfo.itemType ? true : false}
                   oninput={e => {
                     가격계산(e, 품목, "마진");
                   }} />
@@ -1298,128 +960,32 @@
     </div>
   </div>
   {#if 선택상자열림}
-    <div
-      class="select_box"
-      bind:this={선택상자}
-      transition:fly={{ y: -10, duration: 100 }}>
-      <ul>
-        <li>
-          <button
-            type="button"
-            class:searched={선택상자선택항목 == -1}
-            onclick={() => {
-              if (선택상자호출자 && 선택상자호출자.품목) {
-                선택상자호출자.품목.productInfo.sell_price = 0;
-                선택상자호출자.품목.productInfo.PROD_CD = "etc_001";
-                선택상자열림 = false;
-                if (선택상자호출자.요소) (선택상자호출자.요소 as HTMLInputElement).select();
-              }
-            }}
-            bind:this={직접입력선택상자}><span class="selectbox-text"><i>직접입력</i></span></button>
-        </li>
-        {#each Array.isArray(선택상자필터) ? 선택상자필터 : 선택상자항목 as 선택항목, 인덱스}
-          <li>
-            <button
-              type="button"
-              class:searched={선택상자선택항목 == 인덱스}
-              onclick={() => 선택상자항목선택(선택항목)}
-              bind:this={선택상자요소배열[인덱스]}>
-              <span class="selectbox-text">{선택상자호출자.유형 == "브랜드" ? 선택항목.brand : 선택항목.product}{typeof 선택항목 != "string" && 선택항목.soldout ? " (품절)" : ""}</span>
-              {#if 선택항목.stock_level}
-                <span class="stock_level">
-                  <span
-                    class="stock_level_active"
-                    data-stock-level={선택항목.stock_level ?? 0}>
-                    {#each new Array(선택항목.stock_level)}
-                      <span class="stock_level_bar"></span>
-                    {/each}
-                  </span>
-                  <span class="stock_level_bg">
-                    <span class="stock_level_bar"></span>
-                    <span class="stock_level_bar"></span>
-                    <span class="stock_level_bar"></span>
-                    <span class="stock_level_bar"></span>
-                  </span>
-                </span>
-              {/if}
-            </button>
-          </li>
-        {:else}
-          <div class="noitem">선택할 수 있는 목록이 없습니다.</div>
-        {/each}
-      </ul>
-    </div>
+    <Selectbox
+      bind:선택상자
+      bind:선택상자열림
+      bind:직접입력선택상자
+      bind:선택상자요소배열
+      bind:선택상자호출자
+      bind:품절팝업열림
+      {선택상자선택항목}
+      {선택상자필터}
+      {선택상자항목}
+      {전체품목}
+      {선택상자조정}
+      {isHTMLElement}
+      {품목명입력란}
+      {배송형태}
+      {전자배송팝업내용}
+      {전자배송팝업열림}
+      {발주서상태} />
   {/if}
 </div>
 {#if 엑셀데이터선택창 && 엑셀데이터.length}
-  <div
-    class="excelWindow"
-    transition:fade={{ duration: 100 }}>
-    <div
-      class="inner"
-      transition:fly={{ y: 10, duration: 100 }}>
-      <div class="app_header">
-        <span>엑셀데이터 선택중입니다.</span><button
-          type="button"
-          onclick={() => {
-            엑셀데이터선택창 = false;
-            엑셀로딩 = false;
-            엑셀데이터 = [];
-            엑셀양식 = [];
-          }}>닫기</button>
-      </div>
-      <div class="app_body">
-        <div class="steps">
-          <div class="app_label">열 제목으로 삼을 줄을 선택해주세요:</div>
-          <select
-            name="column"
-            id="column"
-            size="5"
-            bind:value={엑셀제목줄}
-            style="margin-bottom: 1em;">
-            {#each 엑셀데이터 as 줄, 인덱스}
-              <option value={인덱스}>{줄.join(" | ")}</option>
-            {/each}
-          </select>
-          {#if 엑셀제목줄 >= 0}
-            <div class="app_label">입력하고자 하는 데이터를 선택해주세요:</div>
-            <div class="app_row">
-              {#each [{ label: "고객명", width: "33%" }, { label: "전화번호1", width: "33%" }, { label: "전화번호2", width: "33%" }, { label: "우편번호", width: "50%" }, { label: "배송메시지", width: "50%" }, { label: "기본주소", width: "100%" }, { label: "상세주소", width: "80%" }, { label: "참고항목", width: "20%" }, { label: "품목명", width: "100%" }] as 선택항목, 인덱스}
-                <div
-                  class="app_col"
-                  style="--flex-basis: {선택항목.width}">
-                  <div>
-                    <label
-                      for={선택항목.label}
-                      class="app_label block">{선택항목.label}</label>
-                  </div>
-                  <select
-                    name={선택항목.label}
-                    id={선택항목.label}
-                    bind:value={엑셀양식[인덱스]}>
-                    <option value={-1}>없음</option>
-                    {#each 엑셀데이터[엑셀제목줄] as 제목, 인덱스}
-                      <option value={인덱스}>{제목}</option>
-                    {/each}
-                  </select>
-                </div>
-              {/each}
-              <div
-                class="app_col"
-                style="--flex-basis: 100%; padding-top: 1em; display: flex; gap: 1em;">
-                <button
-                  type="button"
-                  onclick={() => 엑셀자료입력()}>교체</button
-                ><button
-                  type="button"
-                  onclick={() => 엑셀자료입력(true)}>추가</button>
-              </div>
-            </div>
-          {/if}
-        </div>
-      </div>
-    </div>
-  </div>
+  <ExcelImport
+    bind:엑셀데이터
+    bind:엑셀데이터선택창
+    bind:품목리스트
+    bind:엑셀로딩 />
 {/if}
 {#if 품절팝업열림}
   <Portal target=".soldoutDialog .swal2-html-container">
@@ -1627,99 +1193,6 @@
     border-top: 1px solid #ddd;
   }
 
-  .select_box {
-    position: fixed;
-    background-color: white;
-    border-radius: 0 0 6px 6px;
-    border: 1px solid #ddd;
-    top: calc(var(--selectbox_top) * 1px);
-    left: calc(var(--selectbox_left) * 1px);
-    width: calc(var(--selectbox_width) * 1px);
-    max-height: 400px;
-    overflow-y: auto;
-    box-shadow: 0 2px 4px #0002;
-    z-index: 3;
-  }
-  .select_box ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .select_box ul li button {
-    padding: 0.5em;
-    cursor: pointer;
-    background-color: transparent;
-    font-size: 1em;
-    margin: 0;
-    display: flex;
-    width: 100%;
-    border: none;
-    text-align: left;
-  }
-  .selectbox-text {
-    flex-grow: 1;
-    margin: 0;
-    padding: 0;
-  }
-  .stock_level * {
-    margin: 0;
-    padding: 0;
-  }
-  .select_box ul li :is(button:hover, button.searched) {
-    background-color: #eee;
-  }
-  .select_box .noitem {
-    padding: 0.5em;
-    color: #999;
-    font-style: italic;
-  }
-  .stock_level {
-    position: relative;
-    flex-basis: 2em;
-  }
-
-  .stock_level_bg,
-  .stock_level_active {
-    top: 50%;
-    height: 80%;
-    max-height: 20px;
-    display: flex;
-    transform: translateY(-50%);
-    gap: 1px;
-  }
-
-  .stock_level_bg {
-    position: relative;
-  }
-
-  .stock_level_active {
-    position: absolute;
-    left: 0;
-  }
-
-  .stock_level_active[data-stock-level="1"] {
-    --stock-level-color: red;
-  }
-
-  .stock_level_active[data-stock-level="2"] {
-    --stock-level-color: orange;
-  }
-
-  .stock_level_active[data-stock-level="3"] {
-    --stock-level-color: yellow;
-  }
-
-  .stock_level_active[data-stock-level="4"] {
-    --stock-level-color: green;
-  }
-
-  .stock_level_bar {
-    height: 100%;
-    width: 4px;
-    background-color: var(--stock-level-color, #0002);
-    border-radius: 2px;
-  }
-
   .app_footer {
     display: flex;
     flex-direction: row-reverse;
@@ -1757,35 +1230,6 @@
     background: #fff6;
     top: 0;
     left: 0;
-  }
-
-  .excelWindow {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #fff3;
-    z-index: 5;
-  }
-  .excelWindow .inner {
-    background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 1em;
-    position: absolute;
-    overflow: hidden;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 640px;
-    height: 480px;
-    max-width: 100%;
-    max-height: 100%;
-    box-shadow: 0 2px 8px #0003;
-    overflow-y: auto;
-  }
-  .excelWindow select {
-    width: 100%;
   }
 
   @media screen and (max-width: 640px) {

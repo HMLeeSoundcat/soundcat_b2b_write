@@ -4,9 +4,9 @@ export function parseExcelWithWorker(file: File): Promise<any[][]> {
       type: "module",
     });
 
-    worker.onmessage = (e: MessageEvent<{ success: boolean; data?: any[][]; error?: string }>) => {
-      const { success, data, error } = e.data;
-      if (success && data) resolve(data);
+    worker.onmessage = (e: MessageEvent<{ success: boolean; rows?: any[][]; error?: string }>) => {
+      const { success, rows, error } = e.data;
+      if (success && rows) resolve(rows);
       else reject(new Error(error));
       worker.terminate();
     };
