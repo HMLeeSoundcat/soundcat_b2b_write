@@ -7,7 +7,7 @@
   import type SwalType from "sweetalert2";
   import type { 임시배열타입, 제품정보타입, 품목리스트항목타입 } from "./type";
 
-  let { 전체품목, 선택상자 = $bindable(), 선택상자선택항목, 선택상자호출자 = $bindable(), 선택상자열림 = $bindable(), 선택상자조정, 직접입력선택상자 = $bindable(), 선택상자필터, 선택상자항목, 선택상자요소배열 = $bindable(), isHTMLElement, 품절팝업열림 = $bindable(), 품목명입력란, 배송형태, 전자배송팝업내용, 전자배송팝업열림, 발주서상태 } = $props();
+  let { 전체품목, 선택상자 = $bindable(), 선택상자선택항목, 선택상자호출자 = $bindable(), 선택상자열림 = $bindable(), 선택상자조정, 직접입력선택상자 = $bindable(), 선택상자필터, 선택상자항목, 선택상자요소배열 = $bindable(), isHTMLElement, 품절팝업열림 = $bindable(), 품목명입력란, 배송형태, 전자배송팝업내용, 전자배송팝업열림, 발주서상태 = $bindable() } = $props();
 
   function 선택상자닫기(e: Event) {
     if (!((isHTMLElement(e.target) && isHTMLElement(선택상자) && 선택상자.contains(e.target)) || (isHTMLElement(선택상자호출자.요소) && isHTMLElement(e.target) && 선택상자호출자.요소.contains(e.target)))) {
@@ -138,6 +138,9 @@
           } catch (err) {
             console.error(err);
           }
+
+          //@ts-ignore
+          if (window.getOrderType) 발주서상태 = window.getOrderType();
 
           if (선택항목.software == "0" && 발주서상태 != "선오더" && (선택항목.soldout || 실시간품절여부)) {
             const 품절팝업결과 = (await 품절팝업()) as { isConfirmed: any; isDenied: any; dismiss: any };

@@ -529,6 +529,14 @@
       배송형태셀렉터.addEventListener("change", 배송형태변경);
     }
 
+    let 발주서셀렉터: HTMLSelectElement | null = document.querySelector("#ca_name");
+    if (발주서셀렉터) {
+      발주서셀렉터.addEventListener("change", () => {
+        //@ts-ignore
+        if (window.getOrderType) 발주서상태 = window.getOrderType();
+      });
+    }
+
     //@ts-ignore
     if (window.getExistingData) 품목리스트 = [...품목리스트, ...window.getExistingData()];
 
@@ -957,6 +965,7 @@
       bind:선택상자요소배열
       bind:선택상자호출자
       bind:품절팝업열림
+      bind:발주서상태
       {선택상자선택항목}
       {선택상자필터}
       {선택상자항목}
@@ -966,8 +975,7 @@
       {품목명입력란}
       {배송형태}
       {전자배송팝업내용}
-      {전자배송팝업열림}
-      {발주서상태} />
+      {전자배송팝업열림} />
   {/if}
 </div>
 {#if 엑셀데이터선택창 && 엑셀데이터.length}
