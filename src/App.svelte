@@ -11,6 +11,9 @@
   import { parseExcelWithWorker } from "./lib/parseExcel";
   import type { 개별품목정보, 배송정보타입, 배송형태종류타입, 선택상자호출자타입, 임시배열타입, 전체품목리스트, 제품정보타입, 품목리스트항목타입 } from "./type";
   import ExcelImport from "./ExcelImport.svelte";
+  import { 숫자로변환 } from "./utils.svelte";
+
+  const useDev = import.meta.env.MODE === "development";
 
   let 선택상자열림 = $state(false);
   let 선택상자항목: 임시배열타입[] = $state([]);
@@ -63,7 +66,7 @@
         임시배열 = [
           ...(임시배열 ? 임시배열 : []),
           ...items.map((x: 개별품목정보) => {
-            return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock, stock_level: x.stock_level, bypass_soldout: parseInt(x.bypass_soldout ?? "0") };
+            return { brand: x.brand, product: x.product, PROD_CD: x.PROD_CD, software: x.software, soldout: x.zerostock, stock_level: x.stock_level, bypass_soldout: parseInt(x.bypass_soldout ?? "0"), default_margin: x.default_margin };
           }),
         ];
       }
@@ -75,6 +78,7 @@
   let 배송형태: 배송형태종류타입 | undefined = $state();
 
   let 품목리스트: 품목리스트항목타입[] = $state([]);
+  if (useDev) $inspect(품목리스트);
 
   let 엑셀데이터: any[] = $state([]);
   let 엑셀데이터선택창: boolean = $state(false);
@@ -130,10 +134,7 @@
       .replace(/(\..*)\./g, "$1");
     const 숫자값 = parseInt(String(값)) || 0;
 
-    const 인덱스 = 품목리스트.findIndex(요소 => 요소.uuid == 품목.uuid);
-
-    if (인덱스 == -1) return;
-
+    const 품목정보 = 품목.productInfo;
     function 계산_도매가(sell: number, margin: number) {
       return (sell * (100 - margin)) / 100;
     }
@@ -144,22 +145,31 @@
 
     switch (필드) {
       case "소비자가":
-        품목리스트[인덱스].productInfo.sell_price = 숫자값;
-        품목리스트[인덱스].productInfo.dome_price = 계산_도매가(숫자값, Number(품목리스트[인덱스].productInfo.margin));
+        품목정보.sell_price = 숫자값;
+        품목정보.dome_price = 계산_도매가(숫자값, Number(품목정보.margin));
         break;
       case "공급단가":
-        품목리스트[인덱스].productInfo.dome_price = Math.min(숫자값, 품목리스트[인덱스].productInfo.sell_price ?? 0);
-        품목리스트[인덱스].productInfo.margin = 계산_마진(Number(품목리스트[인덱스].productInfo.sell_price), 품목리스트[인덱스].productInfo.dome_price) || 0;
+        품목정보.dome_price = Math.min(숫자값, 품목정보.sell_price ?? 0);
+        품목정보.margin = 계산_마진(Number(품목정보.sell_price), 품목정보.dome_price) || 0;
         break;
       case "마진":
-        품목리스트[인덱스].productInfo.margin = Math.min(100, Math.max(0, 숫자값));
-        품목리스트[인덱스].productInfo.dome_price = 계산_도매가(Number(품목리스트[인덱스].productInfo.sell_price), 품목리스트[인덱스].productInfo.margin);
+        품목정보.margin = Math.min(100, Math.max(0, 숫자값));
+        품목정보.dome_price = 계산_도매가(Number(품목정보.sell_price), 품목정보.margin);
         break;
       case "수량":
-        품목리스트[인덱스].productInfo.qty = Math.floor(숫자값);
+        품목정보.qty = Math.floor(숫자값);
+
+        const 마진셋업 = 품목.default_margin;
+        const 현재수량 = 품목정보.qty ?? 0;
+        const 타겟마진 = 현재수량 >= 숫자로변환(마진셋업?.per_user?.discount_qty ?? 마진셋업?.discount_qty, 999) ? 숫자로변환(마진셋업?.per_user?.discount_margin ?? 마진셋업?.discount_margin) : 숫자로변환(마진셋업?.per_user?.default_margin ?? 마진셋업?.default_margin);
+        const 타겟공급가 = 현재수량 >= 숫자로변환(마진셋업?.per_user?.discount_qty ?? 마진셋업?.discount_qty, 999) ? 숫자로변환(마진셋업?.per_user?.discount_price ?? 마진셋업?.discount_price) : 숫자로변환(마진셋업?.per_user?.default_prov ?? 마진셋업?.default_prov);
+
+        품목정보.margin = 타겟마진;
+        품목정보.dome_price = 타겟공급가;
+
         break;
     }
-    품목리스트[인덱스].productInfo.total_dome = Number(품목리스트[인덱스].productInfo.dome_price) * Number(품목리스트[인덱스].productInfo.qty);
+    품목정보.total_dome = Number(품목정보.dome_price) * Number(품목정보.qty);
   }
 
   const isHTMLElement = (element: any) => element instanceof HTMLElement || element instanceof HTMLInputElement;
@@ -216,6 +226,8 @@
       } else {
         선택상자호출자.품목.productInfo.sell_price = 0;
         선택상자호출자.품목.productInfo.PROD_CD = "etc_001";
+        선택상자호출자.품목.default_margin = undefined;
+        선택상자호출자.품목.manual_mode = true;
         선택상자열림 = false;
       }
     }
@@ -302,6 +314,7 @@
             uuid: crypto.randomUUID(),
             collapsed: false,
             failed: false,
+            manual_mode: false,
             productInfo: {
               itemType: 0,
               brand: undefined,
@@ -398,13 +411,13 @@
           index: number
         ) => {
           if (index == 0) cur.failed = false;
-          const keys = Object.keys(cur);
-          keys.forEach((item: string) => {
+          const keys = Object.keys(cur) as (keyof 품목리스트항목타입)[];
+          keys.forEach(item => {
             if (배송형태 && ["대리배송", "퀵착불", "익일수령택배"].includes(배송형태)) {
               if (item == "deliveryInfo") {
-                const deliveryInfo = Object.keys(cur[item as keyof 품목리스트항목타입]);
-                deliveryInfo.forEach((deliveryInfoItem: string) => {
-                  const 값 = cur.deliveryInfo[deliveryInfoItem as keyof 배송정보타입];
+                const deliveryInfo = Object.keys(cur[item]) as (keyof 배송정보타입)[];
+                deliveryInfo.forEach(deliveryInfoItem => {
+                  const 값 = cur.deliveryInfo[deliveryInfoItem];
                   if (!값 && ["name", "hp1", "postcode", "addr1", "addr2"].includes(deliveryInfoItem)) {
                     acc.status = false;
                     if (!acc.reason[index]) acc.reason[index] = [];
@@ -416,9 +429,9 @@
             }
 
             if (item == "productInfo") {
-              const productInfo = Object.keys(cur[item as keyof 품목리스트항목타입]);
-              productInfo.forEach((productInfoItem: string) => {
-                const 값 = cur.productInfo[productInfoItem as keyof 제품정보타입];
+              const productInfo = Object.keys(cur[item]) as (keyof 제품정보타입)[];
+              productInfo.forEach(productInfoItem => {
+                const 값 = cur.productInfo[productInfoItem];
                 if (!값) {
                   if (["product", "PROD_CD", "qty"].includes(productInfoItem)) {
                     acc.status = false;
@@ -497,6 +510,23 @@
     가격계산(품목.productInfo.margin, 품목, "마진");
   }
 
+  async function 수동입력활성화(품목: 품목리스트항목타입) {
+    if (품목.manual_mode == true) return;
+
+    const 팝업 = await Swal.fire({
+      icon: "question",
+      title: "수동 입력을 활성화하시겠습니까?",
+      html: "<p>현재 수량에 따른 공급 마진 및 마진 값이 <br />자동으로 입력되도록 설정되어 있습니다.</p><p>영업 담당자로부터 수동 입력을 확인 받으신 경우<br />수동으로 입력이 가능하며,<br />미확인 시 수동 입력하여도 계약된 마진으로<br />발주가 진행되는 점 참고 부탁드립니다.</p>",
+      confirmButtonText: "예(수동 입력 활성화)",
+      showCancelButton: true,
+      cancelButtonText: "아니오(창닫기)",
+    });
+
+    if (!팝업.isConfirmed) return;
+
+    품목.manual_mode = true;
+  }
+
   onMount(async () => {
     try {
       const 품목가져오기 = await fetch("https://b2b.soundcat.com/page/get_products.php", {
@@ -538,7 +568,15 @@
     }
 
     //@ts-ignore
-    if (window.getExistingData) 품목리스트 = [...품목리스트, ...window.getExistingData()];
+    if (window.getExistingData)
+      품목리스트 = [
+        ...품목리스트,
+        //@ts-ignore
+        ...window.getExistingData().map(x => ({
+          ...x,
+          default_margin: 전체품목?.[x.productInfo.brand]?.find(y => y.PROD_CD == x.productInfo.PROD_CD)?.default_margin,
+        })),
+      ];
 
     if (품목리스트.length === 0) {
       품목추가();
@@ -578,7 +616,15 @@
   });
   $effect(() => {
     //@ts-ignore
-    if (품목리스트 && window.setData) window.setData(품목리스트);
+    if (품목리스트 && window.setData)
+      //@ts-ignore
+      window.setData(
+        품목리스트.map(x => {
+          const 반환할값 = structuredClone($state.snapshot(x));
+          delete 반환할값.default_margin;
+          return 반환할값;
+        })
+      );
   });
 </script>
 
@@ -842,8 +888,9 @@
                   <input
                     type="text"
                     id="id_{인덱스}_sell_price"
+                    style="cursor: {품목.productInfo.PROD_CD !== 'etc_001' ? 'not-allowed' : 'normal'}"
                     bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price)), e => 가격계산(e, 품목, "소비자가")}
-                    readonly={품목.productInfo.PROD_CD !== "etc_001"} />
+                    readonly={품목.productInfo.PROD_CD !== "etc_001" || !품목.manual_mode} />
                 </div>
               </div>
               <div
@@ -860,8 +907,10 @@
                   <input
                     type="text"
                     id="id_{인덱스}_dome_price"
+                    style="cursor: {품목.productInfo.itemType || !품목.manual_mode ? 'not-allowed' : 'normal'}"
+                    ondblclick={() => 수동입력활성화(품목)}
                     bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price)), e => 가격계산(e, 품목, "공급단가")}
-                    disabled={품목.productInfo.itemType ? true : false} />
+                    readonly={품목.productInfo.itemType || !품목.manual_mode ? true : false} />
                 </div>
               </div>
               <div
@@ -873,14 +922,16 @@
                     class="app_label block">수량</label>
                 </div>
                 <div
-                  class="app_text_input"
-                  data-label="개">
+                  class={["app_text_input", 품목.default_margin && 숫자로변환(품목.default_margin.per_user?.discount_qty ?? 품목.default_margin?.discount_qty, 0) > (품목.productInfo.qty ?? 0) && "qty"]}
+                  data-label="개"
+                  data-discqty="{품목.default_margin?.per_user?.discount_qty ?? Math.max(숫자로변환(품목.default_margin?.discount_qty, 0) - (품목.productInfo.qty ?? 0), 0)}개만 더 발주하면 {품목.default_margin?.per_user?.discount_margin ?? 품목.default_margin?.discount_margin ?? 0}% 마진이 적용돼요.">
                   <input
                     type="text"
                     class="app_text_input"
                     data-label="개"
                     class:failed={품목.failed && !품목.productInfo.qty}
-                    disabled={품목.productInfo.itemType ? true : false}
+                    readonly={품목.productInfo.itemType ? true : false}
+                    style="cursor: {품목.productInfo.itemType ? 'not-allowed' : 'normal'}"
                     id="id_{인덱스}_qty"
                     bind:value={() => new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty))), e => 가격계산(e, 품목, "수량")} />
                 </div>
@@ -896,8 +947,10 @@
                 <input
                   type="text"
                   id="id_{인덱스}_margin"
+                  style="cursor: {품목.productInfo.itemType || !품목.manual_mode ? 'not-allowed' : 'normal'}"
+                  ondblclick={() => 수동입력활성화(품목)}
                   bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin)), e => 가격계산(e, 품목, "마진")}
-                  disabled={품목.productInfo.itemType ? true : false} />
+                  readonly={품목.productInfo.itemType || !품목.manual_mode ? true : false} />
               </div>
               <div
                 class="app_col"
@@ -913,6 +966,7 @@
                   <input
                     type="text"
                     id="id_{인덱스}_total_dome"
+                    style="cursor: not-allowed"
                     value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.total_dome))}
                     readonly />
                 </div>
