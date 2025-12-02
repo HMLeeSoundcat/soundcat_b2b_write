@@ -5,9 +5,31 @@
 <script lang="ts">
   import { fly } from "svelte/transition";
   import type SwalType from "sweetalert2";
-  import type { 임시배열타입, 제품정보타입, 품목리스트항목타입 } from "./type";
+  import type { 개별품목정보, 배송정보타입, 배송형태종류타입, 선택상자호출자타입, 임시배열타입, 전체품목리스트, 제품정보타입, 품목리스트항목타입 } from "./type";
+  import type { UIEventHandler } from "svelte/elements";
+  import { 숫자로변환 } from "./utils.svelte";
 
-  let { 전체품목, 선택상자 = $bindable(), 선택상자선택항목, 선택상자호출자 = $bindable(), 선택상자열림 = $bindable(), 선택상자조정, 직접입력선택상자 = $bindable(), 선택상자필터, 선택상자항목, 선택상자요소배열 = $bindable(), isHTMLElement, 품절팝업열림 = $bindable(), 품목명입력란, 배송형태, 전자배송팝업내용, 전자배송팝업열림, 발주서상태 = $bindable() } = $props();
+  interface 프롭스타입 {
+    전체품목: 전체품목리스트;
+    선택상자: HTMLElement | undefined;
+    선택상자선택항목: number;
+    선택상자호출자: 선택상자호출자타입;
+    선택상자열림: boolean;
+    선택상자조정: UIEventHandler<Window>;
+    직접입력선택상자: HTMLElement | undefined;
+    선택상자필터: 임시배열타입[] | undefined;
+    선택상자항목: 임시배열타입[];
+    선택상자요소배열: HTMLElement[];
+    isHTMLElement: (element: any) => element is HTMLElement | HTMLInputElement;
+    품절팝업열림: boolean;
+    품목명입력란: Record<string, HTMLElement>;
+    배송형태: 배송형태종류타입 | undefined;
+    전자배송팝업내용: HTMLTextAreaElement | undefined;
+    전자배송팝업열림: boolean;
+    발주서상태: string;
+  }
+
+  let { 전체품목, 선택상자 = $bindable(), 선택상자선택항목, 선택상자호출자 = $bindable(), 선택상자열림 = $bindable(), 선택상자조정, 직접입력선택상자 = $bindable(), 선택상자필터, 선택상자항목, 선택상자요소배열 = $bindable(), isHTMLElement, 품절팝업열림 = $bindable(), 품목명입력란, 배송형태, 전자배송팝업내용, 전자배송팝업열림, 발주서상태 = $bindable() }: 프롭스타입 = $props();
 
   function 선택상자닫기(e: Event) {
     if (!((isHTMLElement(e.target) && isHTMLElement(선택상자) && 선택상자.contains(e.target)) || (isHTMLElement(선택상자호출자.요소) && isHTMLElement(e.target) && 선택상자호출자.요소.contains(e.target)))) {
@@ -103,15 +125,33 @@
     품목.productInfo.total_dome = 0;
     품목.productInfo.useprop = false;
     품목.productInfo.soldout = false;
+    품목.manual_mode = false;
+    품목.default_margin = undefined;
+  }
+
+  function 마진셋업반영(인덱스: number, 브랜드: string) {
+    const 품목 = 선택상자호출자.품목;
+    if (품목) {
+      const 마진셋업 = 전체품목[브랜드][인덱스].default_margin;
+      품목.default_margin = 마진셋업;
+      const 현재수량 = 품목.productInfo.qty ?? 0;
+      const 타겟마진 = 현재수량 >= 숫자로변환(마진셋업?.per_user?.discount_qty ?? 마진셋업?.discount_qty, 999) ? 숫자로변환(마진셋업?.per_user?.discount_margin ?? 마진셋업?.discount_margin) : 숫자로변환(마진셋업?.per_user?.default_margin ?? 마진셋업?.default_margin);
+      const 타겟공급가 = 현재수량 >= 숫자로변환(마진셋업?.per_user?.discount_qty ?? 마진셋업?.discount_qty, 999) ? 숫자로변환(마진셋업?.per_user?.discount_price ?? 마진셋업?.discount_price) : 숫자로변환(마진셋업?.per_user?.default_prov ?? 마진셋업?.default_prov);
+
+      품목.productInfo.margin = 타겟마진;
+      품목.productInfo.dome_price = 타겟공급가;
+    }
   }
 
   async function 선택상자항목선택(선택항목: 임시배열타입) {
     if (isHTMLElement(선택상자호출자.요소) && 선택상자호출자.품목) {
+      const 품목 = 선택상자호출자.품목;
+      const 요소 = 선택상자호출자.요소;
       if (선택상자호출자.유형 == "브랜드") {
-        내용리셋(선택상자호출자.품목);
-        if (선택상자호출자.요소 instanceof HTMLInputElement) 선택상자호출자.품목.productInfo.brand = 선택항목.brand ?? "";
+        내용리셋(품목);
+        if (요소 instanceof HTMLInputElement) 품목.productInfo.brand = 선택항목.brand ?? "";
 
-        const uuid = 선택상자호출자.품목.uuid;
+        const uuid = 품목.uuid;
         if (uuid) setTimeout(() => 품목명입력란[uuid]?.focus(), 100);
       } else if (선택상자호출자.유형 == "품목명") {
         let 실시간품절여부 = false;
@@ -145,7 +185,7 @@
           if (선택항목.software == "0" && 발주서상태 != "선오더" && (선택항목.soldout || 실시간품절여부)) {
             const 품절팝업결과 = (await 품절팝업()) as { isConfirmed: any; isDenied: any; dismiss: any };
             if (품절팝업결과.isDenied) {
-              내용리셋(선택상자호출자.품목);
+              내용리셋(품목);
               return;
             }
 
@@ -216,23 +256,25 @@
           }
         }
 
-        선택상자호출자.품목.productInfo.brand = 선택항목.brand;
-        선택상자호출자.품목.productInfo.product = 선택항목.product;
-        if (선택상자호출자.요소 instanceof HTMLInputElement) 선택상자호출자.요소.value = 선택항목.product ?? "";
-        if (!선택상자호출자.품목.productInfo.brand) return;
-        const 인덱스 = 전체품목[선택상자호출자.품목.productInfo.brand].findIndex((x: 제품정보타입) => x.product == 선택상자호출자.품목?.productInfo.product);
+        품목.productInfo.brand = 선택항목.brand;
+        품목.productInfo.product = 선택항목.product;
+        if (요소 instanceof HTMLInputElement) 요소.value = 선택항목.product ?? "";
+        if (!품목.productInfo.brand) return;
+        const 인덱스 = 전체품목[품목.productInfo.brand].findIndex(x => x.product == 품목?.productInfo.product);
 
         if (인덱스 != -1) {
-          선택상자호출자.품목.productInfo.sell_price = Number(전체품목[선택상자호출자.품목.productInfo.brand][인덱스].price);
-          if (전체품목[선택상자호출자.품목.productInfo.brand][인덱스].custom_option == "1") {
-            선택상자호출자.품목.productInfo.useprop = true;
+          품목.productInfo.sell_price = Number(전체품목[품목.productInfo.brand][인덱스].price);
+          if (전체품목[품목.productInfo.brand][인덱스].custom_option == "1") {
+            품목.productInfo.useprop = true;
           } else {
-            선택상자호출자.품목.productInfo.useprop = false;
+            품목.productInfo.useprop = false;
           }
-          선택상자호출자.품목.productInfo.soldout = Boolean(선택항목.soldout);
-          선택상자호출자.품목.productInfo.dome_price = 선택상자호출자.품목.productInfo.sell_price * ((100 - (선택상자호출자.품목.productInfo.margin ?? 0)) / 100);
-          선택상자호출자.품목.productInfo.total_dome = 선택상자호출자.품목.productInfo.dome_price * (선택상자호출자.품목.productInfo.qty ?? 0);
-          선택상자호출자.품목.productInfo.PROD_CD = 전체품목[선택상자호출자.품목.productInfo.brand][인덱스].PROD_CD;
+          품목.productInfo.soldout = Boolean(선택항목.soldout);
+          품목.productInfo.dome_price = 품목.productInfo.sell_price * ((100 - (품목.productInfo.margin ?? 0)) / 100);
+          if (전체품목[품목.productInfo.brand][인덱스].default_margin) 마진셋업반영(인덱스, 품목.productInfo.brand);
+          품목.productInfo.total_dome = 품목.productInfo.dome_price * (품목.productInfo.qty ?? 0);
+          품목.productInfo.PROD_CD = 전체품목[품목.productInfo.brand][인덱스].PROD_CD;
+          품목.manual_mode = false;
         }
       }
       선택항목.checking = false;
@@ -260,6 +302,8 @@
             선택상자호출자.품목.productInfo.sell_price = 0;
             선택상자호출자.품목.productInfo.PROD_CD = "etc_001";
             선택상자열림 = false;
+            선택상자호출자.품목.default_margin = undefined;
+            선택상자호출자.품목.manual_mode = true;
             if (선택상자호출자.요소) (선택상자호출자.요소 as HTMLInputElement).select();
           }
         }}
