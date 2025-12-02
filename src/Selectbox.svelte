@@ -5,7 +5,7 @@
 <script lang="ts">
   import { fly } from "svelte/transition";
   import type SwalType from "sweetalert2";
-  import type { 개별품목정보, 배송정보타입, 배송형태종류타입, 선택상자호출자타입, 임시배열타입, 전체품목리스트, 제품정보타입, 품목리스트항목타입 } from "./type";
+  import type { 배송형태종류타입, 선택상자호출자타입, 임시배열타입, 전체품목리스트, 품목리스트항목타입 } from "./type";
   import type { UIEventHandler } from "svelte/elements";
   import { 숫자로변환 } from "./utils.svelte";
 
@@ -132,8 +132,9 @@
   function 마진셋업반영(인덱스: number, 브랜드: string) {
     const 품목 = 선택상자호출자.품목;
     if (품목) {
-      const 마진셋업 = 전체품목[브랜드][인덱스].default_margin;
+      const 마진셋업 = typeof 전체품목[브랜드][인덱스].default_margin == "object" ? 전체품목[브랜드][인덱스].default_margin : undefined;
       품목.default_margin = 마진셋업;
+      if (!마진셋업) 품목.manual_mode = true;
       const 현재수량 = 품목.productInfo.qty ?? 0;
       const 타겟마진 = 현재수량 >= 숫자로변환(마진셋업?.per_user?.discount_qty ?? 마진셋업?.discount_qty, 999) ? 숫자로변환(마진셋업?.per_user?.discount_margin ?? 마진셋업?.discount_margin) : 숫자로변환(마진셋업?.per_user?.default_margin ?? 마진셋업?.default_margin);
       const 타겟공급가 = 현재수량 >= 숫자로변환(마진셋업?.per_user?.discount_qty ?? 마진셋업?.discount_qty, 999) ? 숫자로변환(마진셋업?.per_user?.discount_price ?? 마진셋업?.discount_price) : 숫자로변환(마진셋업?.per_user?.default_prov ?? 마진셋업?.default_prov);
@@ -274,7 +275,6 @@
           if (전체품목[품목.productInfo.brand][인덱스].default_margin) 마진셋업반영(인덱스, 품목.productInfo.brand);
           품목.productInfo.total_dome = 품목.productInfo.dome_price * (품목.productInfo.qty ?? 0);
           품목.productInfo.PROD_CD = 전체품목[품목.productInfo.brand][인덱스].PROD_CD;
-          품목.manual_mode = false;
         }
       }
       선택항목.checking = false;
