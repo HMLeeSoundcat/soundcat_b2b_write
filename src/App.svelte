@@ -511,7 +511,7 @@
   }
 
   async function 수동입력활성화(품목: 품목리스트항목타입) {
-    if (품목.manual_mode == true) return;
+    if (품목.manual_mode == true || 품목.productInfo.itemType) return;
 
     const 팝업 = await Swal.fire({
       icon: "question",
@@ -922,7 +922,7 @@
                     class="app_label block">수량</label>
                 </div>
                 <div
-                  class={["app_text_input", 품목.default_margin && 숫자로변환(품목.default_margin.per_user?.discount_qty ?? 품목.default_margin?.discount_qty, 0) > (품목.productInfo.qty ?? 0) && "qty"]}
+                  class={["app_text_input", 품목.default_margin && !품목.productInfo.itemType && 숫자로변환(품목.default_margin.per_user?.discount_qty ?? 품목.default_margin?.discount_qty, 0) > (품목.productInfo.qty ?? 0) && "qty"]}
                   data-label="개"
                   data-discqty="{품목.default_margin?.per_user?.discount_qty ?? Math.max(숫자로변환(품목.default_margin?.discount_qty, 0) - (품목.productInfo.qty ?? 0), 0)}개만 더 발주하면 {품목.default_margin?.per_user?.discount_margin ?? 품목.default_margin?.discount_margin ?? 0}% 마진이 적용돼요.">
                   <input
