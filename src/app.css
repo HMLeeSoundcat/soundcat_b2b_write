@@ -38,10 +38,6 @@
   display: block;
 }
 
-.app_body .app_header {
-  z-index: 1;
-}
-
 .radio_vertical {
   display: flex;
   align-items: center;
@@ -159,10 +155,6 @@
   flex-basis: calc(var(--flex-basis) - 1em);
 }
 
-.postcodebox {
-  border: 1px solid #ddd;
-  margin-bottom: 1em;
-}
 input {
   box-sizing: border-box;
   border-color: #ddd;
@@ -177,14 +169,12 @@ input[type="text"] {
   font-size: 1em;
   padding: 0.5em;
 }
-
-input.failed {
-  background: #f002;
+input[type="text"].editable {
+  background: #59f2;
 }
 
-hr {
-  border: none;
-  border-top: 1px solid #ddd;
+input.failed {
+  background: #f002 !important;
 }
 
 .app_footer {
