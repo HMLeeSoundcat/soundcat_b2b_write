@@ -35,6 +35,5 @@ export function 내용리셋(품목: 품목리스트항목타입, 품목명유�
   품목.productInfo.total_dome = 0;
   품목.productInfo.useprop = false;
   품목.productInfo.soldout = false;
-  품목.manual_mode = false;
   품목.default_margin = undefined;
 }

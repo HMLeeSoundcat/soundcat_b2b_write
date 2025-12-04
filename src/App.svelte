@@ -173,7 +173,7 @@
       품목정보.total_dome = Number(품목정보.dome_price) * Number(품목정보.qty);
     }
 
-    if (!품목.manual_mode && (마진셋업?.brand_disc_amount || 계산할브랜드))
+    if (품목.productInfo.itemType !== 3 && (마진셋업?.brand_disc_amount || 계산할브랜드))
       품목리스트.map(각품목 => {
         if (!(각품목.productInfo.brand == 계산할브랜드 || 각품목.productInfo.brand == 품목.productInfo.brand)) return;
         const 품목정보 = 각품목.productInfo;
@@ -225,7 +225,7 @@
   }
 
   async function 수동입력활성화(품목: 품목리스트항목타입) {
-    if (품목.manual_mode == true || 품목.productInfo.itemType) return;
+    if (품목.productInfo.itemType !== 3) return;
 
     const 팝업 = await Swal.fire({
       icon: "question",
@@ -236,9 +236,7 @@
       cancelButtonText: "아니오(창닫기)",
     });
 
-    if (!팝업.isConfirmed) return;
-
-    품목.manual_mode = true;
+    if (!팝업.isConfirmed) 품목.productInfo.itemType = 0;
   }
 
   function 품목추가(
@@ -262,7 +260,6 @@
             uuid: crypto.randomUUID(),
             collapsed: false,
             failed: false,
-            manual_mode: false,
             productInfo: {
               itemType: 0,
               brand: undefined,
@@ -346,7 +343,7 @@
         선택상자호출자.품목.productInfo.sell_price = 0;
         선택상자호출자.품목.productInfo.PROD_CD = "etc_001";
         선택상자호출자.품목.default_margin = undefined;
-        선택상자호출자.품목.manual_mode = true;
+        선택상자호출자.품목.productInfo.itemType = 3;
         선택상자열림 = false;
       }
     }
@@ -680,6 +677,16 @@
                 bind:group={품목.productInfo.itemType} />
               <span>데모(50%)</span>
             </label>
+            <label class="app_radio">
+              <input
+                type="radio"
+                id="id_{인덱스}_itemType4"
+                name="itemType_{인덱스}"
+                onchange={() => 수동입력활성화(품목)}
+                value={3}
+                bind:group={품목.productInfo.itemType} />
+              <span>특별건</span>
+            </label>
           </div>
           <div class="action">
             {#if 품목리스트.length > 1}
@@ -794,7 +801,7 @@
                     class={[품목.productInfo.PROD_CD == "etc_001" && "editable"]}
                     style="cursor: {품목.productInfo.PROD_CD !== 'etc_001' ? 'not-allowed' : 'normal'}"
                     bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price)), e => 가격계산(e, 품목, "소비자가")}
-                    readonly={품목.productInfo.PROD_CD !== "etc_001" || !품목.manual_mode} />
+                    readonly={품목.productInfo.PROD_CD !== "etc_001" || 품목.productInfo.itemType !== 3} />
                 </div>
               </div>
               <div
@@ -811,11 +818,10 @@
                   <input
                     type="text"
                     id="id_{인덱스}_dome_price"
-                    class={[품목.manual_mode && "editable"]}
-                    style="cursor: {품목.productInfo.itemType || !품목.manual_mode ? 'not-allowed' : 'normal'}"
-                    ondblclick={() => 수동입력활성화(품목)}
+                    class={[품목.productInfo.itemType === 3 && "editable"]}
+                    style="cursor: {품목.productInfo.itemType !== 3 ? 'not-allowed' : 'normal'}"
                     bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price)), e => 가격계산(e, 품목, "공급단가")}
-                    readonly={품목.productInfo.itemType || !품목.manual_mode ? true : false} />
+                    readonly={품목.productInfo.itemType !== 3 ? true : false} />
                 </div>
               </div>
               <div
@@ -832,11 +838,11 @@
                   data-discqty={할인조건계산(품목, true)}>
                   <input
                     type="text"
-                    class={["app_text_input", 품목.manual_mode && "editable"]}
+                    class={["app_text_input", 품목.productInfo.itemType === 3 && "editable"]}
                     data-label="개"
                     class:failed={품목.failed && !품목.productInfo.qty}
-                    readonly={품목.productInfo.itemType ? true : false}
-                    style="cursor: {품목.productInfo.itemType ? 'not-allowed' : 'normal'}"
+                    readonly={품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? true : false}
+                    style="cursor: {품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? 'not-allowed' : 'normal'}"
                     id="id_{인덱스}_qty"
                     bind:value={() => new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty))), e => 가격계산(e, 품목, "수량")} />
                 </div>
@@ -852,11 +858,10 @@
                 <input
                   type="text"
                   id="id_{인덱스}_margin"
-                  class={[품목.manual_mode && "editable"]}
-                  style="cursor: {품목.productInfo.itemType || !품목.manual_mode ? 'not-allowed' : 'normal'}"
-                  ondblclick={() => 수동입력활성화(품목)}
+                  class={[품목.productInfo.itemType === 3 && "editable"]}
+                  style="cursor: {품목.productInfo.itemType !== 3 ? 'not-allowed' : 'normal'}"
                   bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin)), e => 가격계산(e, 품목, "마진")}
-                  readonly={품목.productInfo.itemType || !품목.manual_mode ? true : false} />
+                  readonly={품목.productInfo.itemType !== 3 ? true : false} />
               </div>
               <div
                 class="app_col"

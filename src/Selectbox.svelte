@@ -123,7 +123,7 @@
     if (품목) {
       const 마진셋업 = typeof 전체품목[브랜드][인덱스].default_margin == "object" ? 전체품목[브랜드][인덱스].default_margin : undefined;
       품목.default_margin = 마진셋업;
-      if (!마진셋업) 품목.manual_mode = true;
+      if (!마진셋업) 품목.productInfo.itemType = 3;
       const 현재수량 = 품목.productInfo.qty ?? 0;
       const 타겟마진 = 현재수량 >= 숫자로변환(마진셋업?.per_user?.discount_qty ?? 마진셋업?.discount_qty, 999) ? 숫자로변환(마진셋업?.per_user?.discount_margin ?? 마진셋업?.discount_margin) : 숫자로변환(마진셋업?.per_user?.default_margin ?? 마진셋업?.default_margin);
       const 타겟공급가 = 현재수량 >= 숫자로변환(마진셋업?.per_user?.discount_qty ?? 마진셋업?.discount_qty, 999) ? 숫자로변환(마진셋업?.per_user?.discount_price ?? 마진셋업?.discount_price) : 숫자로변환(마진셋업?.per_user?.default_prov ?? 마진셋업?.default_prov);
@@ -294,7 +294,7 @@
             if (선택상자호출자.요소) (선택상자호출자.요소 as HTMLInputElement).select();
             선택상자열림 = false;
             선택상자호출자.품목.default_margin = undefined;
-            선택상자호출자.품목.manual_mode = true;
+            선택상자호출자.품목.productInfo.itemType = 3;
           }
         }}
         bind:this={직접입력선택상자}><span class="selectbox-text"><i>직접입력</i></span></button>

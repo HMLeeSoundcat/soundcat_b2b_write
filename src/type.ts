@@ -6,12 +6,11 @@ export interface 품목리스트항목타입 {
   deliveryInfo: 배송정보타입;
   collapsed: boolean;
   failed: boolean;
-  manual_mode: boolean;
   default_margin?: 마진셋업타입;
 }
 
 export interface 제품정보타입 {
-  itemType: 0 | 1 | 2;
+  itemType: 0 | 1 | 2 | 3;
   brand: string | undefined;
   product: string | undefined;
   PROD_CD: string | undefined;
