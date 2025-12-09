@@ -40,6 +40,7 @@
   let 우편번호검색상자: Record<string, HTMLElement> = $state({});
   let 우편번호상세입력란: Record<string, HTMLElement> = $state({});
 
+  /** 업체 별 가입 시 입력한 주소를 가져와 여기에 넣는다.*/
   let 기본주소:
     | {
         name: string;
@@ -59,6 +60,8 @@
   let 컨테이너 = $state();
 
   let 전체품목: 전체품목리스트 = $state({} as 전체품목리스트);
+
+  /** 검색상자(품목명 검색, 브랜드 검색 시 나타나는 선택상자)에 들어갈 값을 미리 생성해둔다. */
   let 검색상자전체품목: 임시배열타입[] | undefined = $derived.by(() => {
     let 임시배열: 임시배열타입[] | undefined = undefined;
     Object.keys(전체품목).forEach(각브랜드 => {
@@ -86,6 +89,7 @@
   let 엑셀파일선택: HTMLInputElement | undefined = $state();
   let 엑셀로딩: boolean = $state(false);
 
+  /** 배송형태가 변경되면 이벤트에 따라 실행되는 함수. 익일수령택배로 선택된 경우, 기본주소 변수로부터 업체별 기본주소로 자동 입력시킨다. 아니면 undefined로 채운다. */
   function 배송형태변경(e: Event) {
     const 값 = (e.target as HTMLSelectElement).value;
     if (배송형태종류.includes(값 as any)) {
@@ -126,6 +130,13 @@
     }
   }
 
+  /**
+   * 입력된 값에 따라 가격을 계산해 총합까지 계산해준다.
+   * @param e 현재 입력중인 값
+   * @param 품목 발주서 각 품목 행
+   * @param 필드 현재 입력중인 필드 이름
+   * @param 계산할브랜드 브랜드 할인 최소 금액이 지정된 경우를 위해 현재 선택된 브랜드를 가져온다.
+   */
   async function 가격계산(e: number | string | undefined, 품목: 품목리스트항목타입, 필드: string | undefined, 계산할브랜드: string | undefined = undefined) {
     const 품목정보 = 품목.productInfo;
     const 마진셋업 = 품목.default_margin;
@@ -194,6 +205,11 @@
       });
   }
 
+  /**
+   * 브랜드 별 총액 할인인지 수량 할인인지 판단하고 부족한 수량이나 가격을 반환하거나 boolean like한 값으로 반환한다.
+   * @param 품목 발주서 품목 요소
+   * @param 출력 false면 충족 여부만을 반환한다. (툴팁 표시를 위한)
+   */
   function 할인조건계산(품목: 품목리스트항목타입, 출력 = false) {
     const 할인수량 = 품목.default_margin?.per_user?.discount_qty ?? 품목.default_margin?.discount_qty;
     const 할인마진 = 품목.default_margin?.per_user?.discount_margin ?? 품목.default_margin?.discount_margin;
@@ -212,6 +228,11 @@
     }
   }
 
+  /**
+   * 데모 40%, 50%를 클릭하면 마진과 수량을 제한한다.
+   * @param e Change 이벤트
+   * @param 품목 발주서 품목 요소
+   */
   function 데모반영(e: Event, 품목: 품목리스트항목타입) {
     const 값 = (e?.currentTarget as HTMLButtonElement)?.value;
     if (parseInt(값)) {
@@ -224,6 +245,10 @@
     가격계산(품목.productInfo.margin, 품목, "마진");
   }
 
+  /**
+   * 수동 입력을 활성화한다.
+   * @param 품목 발주서 품목 요소
+   */
   async function 수동입력활성화(품목: 품목리스트항목타입) {
     if (품목.productInfo.itemType !== 3) return;
 
@@ -239,6 +264,10 @@
     if (!팝업.isConfirmed) 품목.productInfo.itemType = 0;
   }
 
+  /**
+   * 품목 추가 버튼을 누르면 마지막 품목을 기반으로 새 발주 품목을 생성한다.
+   * @param 옵션 복제 여부와 넣을 데이터를 수동으로 지정할 경우 데이터에 집어넣는다.
+   */
   function 품목추가(
     옵션:
       | {
@@ -290,6 +319,14 @@
     if (마지막품목) 가격계산(undefined, 마지막품목, undefined, 마지막품목.productInfo.brand);
   }
 
+  /**
+   * 브랜드와 품목명 필드를 클릭하면 검색상자가 나타나도록 초기화하는 함수
+   * @param e 이벤트
+   * @param 품목 발주서 품목 요소
+   * @param 유형 어떤 필드가 호출했는지
+   * @param 요소 호출한 요소 자신
+   * @param 인덱스 발주서 품목 인덱스
+   */
   function 선택상자열기(e: Event, 품목: 품목리스트항목타입, 유형: string, 요소: HTMLElement, 인덱스: number) {
     요소.removeEventListener("input", 선택상자검색);
     요소.removeEventListener("keydown", 선택상자검색항목선택);
@@ -331,6 +368,10 @@
     if (e) 선택상자검색(e);
   }
 
+  /**
+   * 필드에서 키보드 조작할 때 기본 동작 대신 선택상자에서 원하는 동작이 이루어지도록 해주는 함수
+   * @param e 키보드 이벤트
+   */
   function 선택상자검색항목선택(e: KeyboardEvent) {
     if (!(선택상자호출자.품목 && 선택상자호출자.요소)) return;
 
@@ -368,6 +409,10 @@
     }
   }
 
+  /**
+   * 선택상자가 열려있을 때 필드에서 값을 입력하면 선택상자 목록으로부터 입력된 값을 검색한다.
+   * @param e
+   */
   function 선택상자검색(e: Event) {
     if (!선택상자열림) 선택상자열림 = true;
     let 검색된항목;
@@ -398,6 +443,7 @@
     }
   }
 
+  /** 창 위치와 사이즈가 변경된 경우를 필드에 따라붙도록 */
   function 선택상자조정() {
     requestAnimationFrame(() => {
       if (!(선택상자호출자.요소 && 컨테이너 && isHTMLElement(컨테이너))) return;
@@ -409,6 +455,7 @@
     });
   }
 
+  /** 작성 완료를 누르면 Submit 함수로부터 이벤트를 감지하여 발주서 품목 값이 올바른지 유효성 검사한다. 검사에 실패하면 문제가 있는 필드를 빨갛게 표시해준다. */
   async function 유효성검사() {
     let 검사결과: number = 1;
     let 자세한내용 = "";
@@ -496,9 +543,10 @@
     }
 
     //@ts-ignore
-    if (window.validateData) window.validateData(검사결과);
+    if (window.validateData) window.validateData(검사결과); // 작성 완료 버튼을 클릭하고 유효성 검사 결과를 반환한다. 유효성 검사는 Promise를 반환하도록 되어 있으므로, 결과가 반환되지 않으면 통과되지 않는다.
   }
 
+  /** 엑셀로부터 발주서 품목을 가져올 수 있다. */
   async function 엑셀파싱(e: Event) {
     if (!엑셀파일선택) return;
     const 파일 = 엑셀파일선택.files?.[0];
@@ -540,7 +588,7 @@
       alert("오류가 발생하여 전체 품목 리스트를 가져오지 못했습니다. 품목을 수동으로 입력하여 작성이 가능합니다.");
     }
 
-    let 배송형태셀렉터: HTMLSelectElement | null = document.querySelector("#ex_1");
+    let 배송형태셀렉터: HTMLSelectElement | null = document.querySelector("#ex_1"); // HTML DOM에서 가져온다.
     if (배송형태셀렉터) {
       const 초기값 = 배송형태셀렉터.value;
 
@@ -550,16 +598,17 @@
       배송형태셀렉터.addEventListener("change", 배송형태변경);
     }
 
-    let 발주서셀렉터: HTMLSelectElement | null = document.querySelector("#ca_name");
+    let 발주서셀렉터: HTMLSelectElement | null = document.querySelector("#ca_name"); // HTML DOM에서 가져온다.
     if (발주서셀렉터) {
       발주서셀렉터.addEventListener("change", () => {
         //@ts-ignore
-        if (window.getOrderType) 발주서상태 = window.getOrderType();
+        if (window.getOrderType) 발주서상태 = window.getOrderType(); // 이벤트를 여기에서 걸어 발주서상태가 발주서셀렉터를 변경함에 따라 업데이트 되도록 해준다. getOrderType() 함수는 write.skin.html.php 파일에 있다.
       });
     }
 
     //@ts-ignore
     if (window.getExistingData)
+      // 발주서를 수정하는 경우 기존에 JSON 값이 있을텐데 그걸 가져오도록 하는 함수이다. getExistingData() 함수는 write.skin.html.php 파일에 있다.
       품목리스트 = [
         ...품목리스트,
         //@ts-ignore
@@ -574,12 +623,13 @@
     }
 
     //@ts-ignore
-    if (window.getDefaultAddr) 기본주소 = window.getDefaultAddr();
+    if (window.getDefaultAddr) 기본주소 = window.getDefaultAddr(); // 업체 별 가입 시 등록된 주소를 가져와 저장하는 함수이다. getDefaultAddr() 함수는 write.skin.html.php 파일에 있다.
     //@ts-ignore
-    if (window.getOrderType) 발주서상태 = window.getOrderType();
+    if (window.getOrderType) 발주서상태 = window.getOrderType(); // 발주서 상태를 가져오는 함수이다. getOrderType() 함수는 write.skin.html.php 파일에 있다.
 
-    window.addEventListener("formValidation", 유효성검사);
+    window.addEventListener("formValidation", 유효성검사); // formValidation이라는 커스텀 이벤트를 리스닝하고, write.skin.html.php 함수에서 Submit 할 때 이 이벤트를 Dispatch하여 유효성검사 함수가 실행되도록 한다.
     window.addEventListener("autosaveload", e => {
+      // autosaveload라는 커스텀 이벤트를 리스닝하고, write.skin.html.php에서 이벤트를 Dispatch하면 거기서 자동저장된 발주서 정보를 가져와 품목리스트에 담아준다.
       //@ts-ignore
       const json = e.detail.json;
       try {
@@ -598,6 +648,7 @@
     }
   });
 
+  // 선택상자선택항목 인덱스 값이 바뀌면 scrollIntoView()를 실행하여 요소가 스크롤 화면 내에 보이게 한다.
   $effect(() => {
     if (선택상자선택항목 >= 0) {
       선택상자요소배열[선택상자선택항목]?.scrollIntoView({ block: "nearest" });
@@ -605,6 +656,8 @@
       직접입력선택상자?.scrollIntoView({ block: "nearest" });
     }
   });
+
+  // 발주서 품목리스트 값이 변경되면 write.skin.html.php의 setData()함수를 실행하여 실제 들어갈 데이터를 전송한다.
   $effect(() => {
     //@ts-ignore
     if (품목리스트 && window.setData)
@@ -923,6 +976,7 @@
     </div>
   </div>
   {#if 선택상자열림}
+    <!-- 선택상자를 열 때 컴포넌트가 노출된다. -->
     <Selectbox
       bind:선택상자
       bind:선택상자열림
