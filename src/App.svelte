@@ -9,8 +9,8 @@
   import type SwalType from "sweetalert2";
   import Selectbox from "./Selectbox.svelte";
   import { parseExcelWithWorker } from "./lib/parseExcel";
-  import type { 개별품목정보, 배송정보타입, 배송형태종류타입, 선택상자호출자타입, 임시배열타입, 전체품목리스트, 제품정보타입, 품목리스트항목타입 } from "./type";
   import ExcelImport from "./ExcelImport.svelte";
+  import type { 개별품목정보, 배송정보타입, 배송형태종류타입, 선택상자호출자타입, 임시배열타입, 전체품목리스트, 제품정보타입, 품목리스트항목타입 } from "./type";
   import { isHTMLElement, 로케일숫자로표시, 숫자로변환, 계산_도매가, 계산_마진, 내용리셋 } from "./utils.svelte";
   import Postinfo from "./Postinfo.svelte";
 

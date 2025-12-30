@@ -6,6 +6,27 @@
 
   let 엑셀제목줄 = $state(-1);
   let 엑셀양식 = $state([]);
+  $inspect(엑셀양식);
+
+  let 최대화여부 = $state(false);
+
+  let step1box: HTMLElement | undefined = $state();
+
+  const 필드양식 = [
+    { label: "고객명", width: "33%" },
+    { label: "전화번호1", width: "33%" },
+    { label: "전화번호2", width: "33%" },
+    { label: "우편번호", width: "50%" },
+    { label: "배송메시지", width: "50%" },
+    { label: "기본주소", width: "100%" },
+    { label: "상세주소", width: "80%" },
+    { label: "참고항목", width: "20%" },
+    { label: "품목명", width: "100%" },
+  ];
+
+  $effect(() => {
+    if (step1box && (step1box as HTMLDetailsElement).open && 엑셀제목줄 !== -1) (step1box as HTMLDetailsElement).open = false;
+  });
 
   function 엑셀자료입력(추가: boolean = false) {
     const 고객명 = 엑셀양식[0];
@@ -69,6 +90,7 @@
   transition:fade={{ duration: 100 }}>
   <div
     class="inner"
+    style={최대화여부 ? "width: 100%; height: 100%; border-radius: 0;" : ""}
     transition:fly={{ y: 10, duration: 100 }}>
     <div class="app_header">
       <span>엑셀데이터 선택중입니다.</span><button
@@ -79,24 +101,40 @@
           엑셀데이터 = [];
           엑셀양식 = [];
         }}>닫기</button>
+      <div class="gap"></div>
+      <button
+        type="button"
+        aria-label="창 크기 키우기/줄이기"
+        title="창 크기 키우기/줄이기"
+        onclick={() => (최대화여부 = !최대화여부)}>
+        <i class={["fas", 최대화여부 ? "fa-compress" : "fa-expand"]}></i>
+      </button>
     </div>
     <div class="app_body">
       <div class="steps">
-        <div class="app_label">열 제목으로 삼을 줄을 선택해주세요:</div>
-        <select
-          name="column"
-          id="column"
-          size="5"
-          bind:value={엑셀제목줄}
-          style="margin-bottom: 1em;">
-          {#each 엑셀데이터 as 줄, 인덱스}
-            <option value={인덱스}>{줄.join(" | ")}</option>
-          {/each}
-        </select>
+        <details
+          open
+          bind:this={step1box}>
+          <summary
+            class="title app_label"
+            style="cursor: pointer"
+            >1단계: 먼저 어느 줄이 제목 줄인지 선택해주세요.
+          </summary>
+          <select
+            name="column"
+            id="column"
+            size="5"
+            bind:value={엑셀제목줄}
+            style="margin-bottom: 1em;">
+            {#each 엑셀데이터 as 줄, 인덱스}
+              <option value={인덱스}>{줄.join(" | ")}</option>
+            {/each}
+          </select>
+        </details>
         {#if 엑셀제목줄 >= 0}
-          <div class="app_label">입력하고자 하는 데이터를 선택해주세요:</div>
+          <div class="title app_label">2단계: 각 항목에 맞게 선택해주세요.</div>
           <div class="app_row">
-            {#each [{ label: "고객명", width: "33%" }, { label: "전화번호1", width: "33%" }, { label: "전화번호2", width: "33%" }, { label: "우편번호", width: "50%" }, { label: "배송메시지", width: "50%" }, { label: "기본주소", width: "100%" }, { label: "상세주소", width: "80%" }, { label: "참고항목", width: "20%" }, { label: "품목명", width: "100%" }] as 선택항목, 인덱스}
+            {#each 필드양식 as 선택항목, 인덱스}
               <div
                 class="app_col"
                 style="--flex-basis: {선택항목.width}">
@@ -109,9 +147,15 @@
                   name={선택항목.label}
                   id={선택항목.label}
                   bind:value={엑셀양식[인덱스]}>
+                  <option
+                    selected
+                    disabled
+                    value={-1}>선택</option>
                   <option value={-1}>없음</option>
                   {#each 엑셀데이터[엑셀제목줄] as 제목, 인덱스}
-                    <option value={인덱스}>{제목}</option>
+                    <option value={인덱스}>
+                      {제목}{엑셀양식.find(x => x === 인덱스) !== undefined ? " → " + 필드양식[인덱스].label : ""}
+                    </option>
                   {/each}
                 </select>
               </div>
@@ -147,6 +191,10 @@
     margin: 0.5em 0;
   }
 
+  .app_label.title {
+    font-size: 1.2em;
+  }
+
   .app_header {
     display: flex;
     align-items: center;
@@ -161,6 +209,7 @@
 
   .app_body {
     padding: 1em;
+    color: #222;
   }
 
   .app_row {
@@ -201,7 +250,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: #fff3;
+    background-color: #0006;
     z-index: 5;
   }
   .excelWindow .inner {
@@ -219,8 +268,23 @@
     max-height: 100%;
     box-shadow: 0 2px 8px #0003;
     overflow-y: auto;
+    transition:
+      width 0.4s,
+      height 0.4s;
+    transition-timing-function: linear(0 0%, 0.91 3.64%, 0.97 23.43%, 0.99 47.59%, 1 73.92%, 1 100%);
   }
   .excelWindow select {
     width: 100%;
+  }
+
+  .gap {
+    flex-grow: 1;
+  }
+
+  select {
+    font-size: 1em;
+    padding: 0.2em;
+    border: 1px solid #0004;
+    border-radius: 4px;
   }
 </style>
