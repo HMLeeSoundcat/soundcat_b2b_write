@@ -274,7 +274,7 @@
           복제?: boolean;
           데이터?: 품목리스트항목타입[];
         }
-      | undefined = undefined
+      | undefined = undefined,
   ) {
     품목리스트 = [
       ...품목리스트,
@@ -475,7 +475,7 @@
             warning_reason: string[][];
           },
           cur: 품목리스트항목타입,
-          index: number
+          index: number,
         ) => {
           if (index == 0) cur.failed = false;
           const keys = Object.keys(cur) as (keyof 품목리스트항목타입)[];
@@ -523,7 +523,7 @@
           reason: [],
           warning: false,
           warning_reason: [],
-        }
+        },
       );
       if (결과.status == false) 검사결과 = 0;
       if (결과.status && 결과.warning) 검사결과 = 2;
@@ -571,10 +571,12 @@
       const 품목가져오기 = await fetch("https://b2b.soundcat.com/page/get_products.php", {
         headers: {
           "Content-Type": "application/json",
+          UseDev: "user",
         },
         method: "POST",
         body: JSON.stringify({
           key: "b2b_write",
+          restrict: true,
         }),
       });
 
@@ -667,17 +669,13 @@
           const 반환할값 = structuredClone($state.snapshot(x));
           delete 반환할값.default_margin;
           return 반환할값;
-        })
+        }),
       );
   });
 </script>
 
-<div
-  class="app_container"
-  bind:this={컨테이너}>
-  <div
-    class="prod_list"
-    class:excelLoading={엑셀로딩}>
+<div class="app_container" bind:this={컨테이너}>
+  <div class="prod_list" class:excelLoading={엑셀로딩}>
     {#each 품목리스트 as 품목, 인덱스 (품목.uuid)}
       <div
         class="prod_item"
@@ -686,12 +684,7 @@
         }}
         transition:fly={{ y: -10, duration: 100 }}>
         <div class="app_header">
-          <button
-            type="button"
-            class="arcodian"
-            onclick={() => (품목.collapsed = !품목.collapsed)}
-            aria-label="품목 접기/펼치기"
-            title="품목 접기/펼치기">{@html 품목.collapsed ? `<i class="fas fa-chevron-right"></i>` : `<i class="fas fa-chevron-down"></i>`}</button>
+          <button type="button" class="arcodian" onclick={() => (품목.collapsed = !품목.collapsed)} aria-label="품목 접기/펼치기" title="품목 접기/펼치기">{@html 품목.collapsed ? `<i class="fas fa-chevron-right"></i>` : `<i class="fas fa-chevron-down"></i>`}</button>
           <span class="item_title"><strong>품목{인덱스 + 1}</strong></span><span class="hori_div"></span>
           <div class="radio_vertical">
             <label class="app_radio">
@@ -731,13 +724,7 @@
               <span>데모(50%)</span>
             </label>
             <label class="app_radio">
-              <input
-                type="radio"
-                id="id_{인덱스}_itemType4"
-                name="itemType_{인덱스}"
-                onchange={() => 수동입력활성화(품목)}
-                value={3}
-                bind:group={품목.productInfo.itemType} />
+              <input type="radio" id="id_{인덱스}_itemType4" name="itemType_{인덱스}" onchange={() => 수동입력활성화(품목)} value={3} bind:group={품목.productInfo.itemType} />
               <span>특별건</span>
             </label>
           </div>
@@ -754,25 +741,14 @@
           </div>
         </div>
         {#if !품목.collapsed}
-          <div
-            class="app_body"
-            transition:fly={{ y: -10, duration: 100 }}>
+          <div class="app_body" transition:fly={{ y: -10, duration: 100 }}>
             {#if 배송형태 && ["대리배송", "익일수령택배", "퀵착불"].includes(배송형태)}
-              <Postinfo
-                {인덱스}
-                bind:품목={품목리스트[인덱스]}
-                bind:우편번호검색열림
-                bind:우편번호검색상자
-                bind:우편번호상세입력란></Postinfo>
+              <Postinfo {인덱스} bind:품목={품목리스트[인덱스]} bind:우편번호검색열림 bind:우편번호검색상자 bind:우편번호상세입력란></Postinfo>
             {/if}
             <div class="prodInfo app_row">
-              <div
-                class="app_col"
-                style="--flex-basis: 20%;">
+              <div class="app_col" style="--flex-basis: 20%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_brand"
-                    class="app_label block">브랜드</label>
+                  <label for="id_{인덱스}_brand" class="app_label block">브랜드</label>
                 </div>
                 <input
                   type="text"
@@ -794,13 +770,9 @@
                     e.currentTarget.removeEventListener("keydown", 선택상자검색항목선택);
                   }} />
               </div>
-              <div
-                class="app_col"
-                style="--flex-basis: {품목.productInfo.useprop || 품목.productInfo.PROD_CD == 'etc_001' ? '40' : '80'}%;">
+              <div class="app_col" style="--flex-basis: {품목.productInfo.useprop || 품목.productInfo.PROD_CD == 'etc_001' ? '40' : '80'}%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_product"
-                    class="app_label block">품목명 <span style="font-weight:normal; font-size: 0.9em">(찾는 품목이 없는 경우 직접 입력하여 진행 가능)</span></label>
+                  <label for="id_{인덱스}_product" class="app_label block">품목명 <span style="font-weight:normal; font-size: 0.9em">(찾는 품목이 없는 경우 직접 입력하여 진행 가능)</span></label>
                 </div>
                 <input
                   type="text"
@@ -822,117 +794,49 @@
                   }} />
               </div>
               {#if 품목.productInfo.useprop || 품목.productInfo.PROD_CD == "etc_001"}
-                <div
-                  class="app_col"
-                  style="--flex-basis: 40%;">
+                <div class="app_col" style="--flex-basis: 40%;">
                   <div>
-                    <label
-                      for="id_{인덱스}_prop"
-                      class="app_label block">옵션</label>
+                    <label for="id_{인덱스}_prop" class="app_label block">옵션</label>
                   </div>
-                  <input
-                    type="text"
-                    id="id_{인덱스}_prop"
-                    class:failed={품목.failed && 품목.productInfo.useprop && !품목.productInfo.prop}
-                    bind:value={품목.productInfo.prop} />
+                  <input type="text" id="id_{인덱스}_prop" class:failed={품목.failed && 품목.productInfo.useprop && !품목.productInfo.prop} bind:value={품목.productInfo.prop} />
                 </div>
               {/if}
-              <div
-                class="app_col"
-                style="--flex-basis: 20%;">
+              <div class="app_col" style="--flex-basis: 20%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_sell_price"
-                    class="app_label block">소비자가</label>
+                  <label for="id_{인덱스}_sell_price" class="app_label block">소비자가</label>
                 </div>
-                <div
-                  class="app_text_input"
-                  data-label="원">
-                  <input
-                    type="text"
-                    id="id_{인덱스}_sell_price"
-                    class={[품목.productInfo.PROD_CD == "etc_001" && "editable"]}
-                    style="cursor: {품목.productInfo.PROD_CD !== 'etc_001' ? 'not-allowed' : 'normal'}"
-                    bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price)), e => 가격계산(e, 품목, "소비자가")}
-                    readonly={품목.productInfo.PROD_CD !== "etc_001" || 품목.productInfo.itemType !== 3} />
+                <div class="app_text_input" data-label="원">
+                  <input type="text" id="id_{인덱스}_sell_price" class={[품목.productInfo.PROD_CD == "etc_001" && "editable"]} style="cursor: {품목.productInfo.PROD_CD !== 'etc_001' ? 'not-allowed' : 'normal'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price)), e => 가격계산(e, 품목, "소비자가")} readonly={품목.productInfo.PROD_CD !== "etc_001" || 품목.productInfo.itemType !== 3} />
                 </div>
               </div>
-              <div
-                class="app_col"
-                style="--flex-basis: 20%;">
+              <div class="app_col" style="--flex-basis: 20%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_dome_price"
-                    class="app_label block">공급단가</label>
+                  <label for="id_{인덱스}_dome_price" class="app_label block">공급단가</label>
                 </div>
-                <div
-                  class="app_text_input"
-                  data-label="원">
-                  <input
-                    type="text"
-                    id="id_{인덱스}_dome_price"
-                    class={[품목.productInfo.itemType === 3 && "editable"]}
-                    style="cursor: {품목.productInfo.itemType !== 3 ? 'not-allowed' : 'normal'}"
-                    bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price)), e => 가격계산(e, 품목, "공급단가")}
-                    readonly={품목.productInfo.itemType !== 3 ? true : false} />
+                <div class="app_text_input" data-label="원">
+                  <input type="text" id="id_{인덱스}_dome_price" class={[품목.productInfo.itemType === 3 && "editable"]} style="cursor: {품목.productInfo.itemType !== 3 ? 'not-allowed' : 'normal'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price)), e => 가격계산(e, 품목, "공급단가")} readonly={품목.productInfo.itemType !== 3 ? true : false} />
                 </div>
               </div>
-              <div
-                class="app_col"
-                style="--flex-basis: 10%;">
+              <div class="app_col" style="--flex-basis: 10%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_qty"
-                    class="app_label block">수량</label>
+                  <label for="id_{인덱스}_qty" class="app_label block">수량</label>
                 </div>
-                <div
-                  class={["app_text_input", 품목.default_margin && !품목.productInfo.itemType && !할인조건계산(품목) && "qty"]}
-                  data-label="개"
-                  data-discqty={할인조건계산(품목, true)}>
-                  <input
-                    type="text"
-                    class={["app_text_input", 품목.productInfo.itemType === 3 && "editable"]}
-                    data-label="개"
-                    class:failed={품목.failed && !품목.productInfo.qty}
-                    readonly={품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? true : false}
-                    style="cursor: {품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? 'not-allowed' : 'normal'}"
-                    id="id_{인덱스}_qty"
-                    bind:value={() => new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty))), e => 가격계산(e, 품목, "수량")} />
+                <div class={["app_text_input", 품목.default_margin && !품목.productInfo.itemType && !할인조건계산(품목) && "qty"]} data-label="개" data-discqty={할인조건계산(품목, true)}>
+                  <input type="text" class={["app_text_input", 품목.productInfo.itemType === 3 && "editable"]} data-label="개" class:failed={품목.failed && !품목.productInfo.qty} readonly={품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? true : false} style="cursor: {품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? 'not-allowed' : 'normal'}" id="id_{인덱스}_qty" bind:value={() => new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty))), e => 가격계산(e, 품목, "수량")} />
                 </div>
               </div>
-              <div
-                class="app_col"
-                style="--flex-basis: 10%;">
+              <div class="app_col" style="--flex-basis: 10%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_margin"
-                    class="app_label block">마진(%)</label>
+                  <label for="id_{인덱스}_margin" class="app_label block">마진(%)</label>
                 </div>
-                <input
-                  type="text"
-                  id="id_{인덱스}_margin"
-                  class={[품목.productInfo.itemType === 3 && "editable"]}
-                  style="cursor: {품목.productInfo.itemType !== 3 ? 'not-allowed' : 'normal'}"
-                  bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin)), e => 가격계산(e, 품목, "마진")}
-                  readonly={품목.productInfo.itemType !== 3 ? true : false} />
+                <input type="text" id="id_{인덱스}_margin" class={[품목.productInfo.itemType === 3 && "editable"]} style="cursor: {품목.productInfo.itemType !== 3 ? 'not-allowed' : 'normal'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin)), e => 가격계산(e, 품목, "마진")} readonly={품목.productInfo.itemType !== 3 ? true : false} />
               </div>
-              <div
-                class="app_col"
-                style="--flex-basis: 40%;">
+              <div class="app_col" style="--flex-basis: 40%;">
                 <div>
-                  <label
-                    for="id_{인덱스}_total_dome"
-                    class="app_label block">공급합계</label>
+                  <label for="id_{인덱스}_total_dome" class="app_label block">공급합계</label>
                 </div>
-                <div
-                  class="app_text_input"
-                  data-label="원">
-                  <input
-                    type="text"
-                    id="id_{인덱스}_total_dome"
-                    style="cursor: not-allowed"
-                    value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.total_dome))}
-                    readonly />
+                <div class="app_text_input" data-label="원">
+                  <input type="text" id="id_{인덱스}_total_dome" style="cursor: not-allowed" value={new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.total_dome))} readonly />
                 </div>
               </div>
             </div>
@@ -942,16 +846,10 @@
     {/each}
   </div>
   <div class="app_footer app_row">
-    <button
-      type="button"
-      onclick={() => 품목추가({ 복제: true })}>추가</button>
-    <div
-      class="app_col"
-      style="display: flex; align-items:center; justify-content: flex-end;">
+    <button type="button" onclick={() => 품목추가({ 복제: true })}>추가</button>
+    <div class="app_col" style="display: flex; align-items:center; justify-content: flex-end;">
       <div style="margin: 0; padding: 0.5em 0.5em calc(0.5em - 1px); border: 1px solid #ddd; border-right: none; box-sizing: border-box; background: #eee; border-radius: 4px 0 0 4px">총합계</div>
-      <div
-        class="app_text_input"
-        data-label="원">
+      <div class="app_text_input" data-label="원">
         <input
           style="margin: 0; width: unset; border: 1px solid #ddd; border-radius: 0 4px 4px 0"
           type="text"
@@ -959,51 +857,21 @@
           value={new Intl.NumberFormat("ko-KR").format(
             품목리스트.reduce((val, x) => {
               return val + (x.productInfo.total_dome ?? 0);
-            }, 0)
+            }, 0),
           )} />
       </div>
     </div>
     <div style="text-align: right">
-      <button
-        type="button"
-        onclick={() => 엑셀파일선택?.click()}>엑셀자료 불러오기</button
-      ><input
-        hidden
-        type="file"
-        accept=".xlsx,.xls"
-        bind:this={엑셀파일선택}
-        onchange={엑셀파싱} />
+      <button type="button" onclick={() => 엑셀파일선택?.click()}>엑셀자료 불러오기</button><input hidden type="file" accept=".xlsx,.xls" bind:this={엑셀파일선택} onchange={엑셀파싱} />
     </div>
   </div>
   {#if 선택상자열림}
     <!-- 선택상자를 열 때 컴포넌트가 노출된다. -->
-    <Selectbox
-      bind:선택상자
-      bind:선택상자열림
-      bind:직접입력선택상자
-      bind:선택상자요소배열
-      bind:선택상자호출자
-      bind:품절팝업열림
-      bind:발주서상태
-      {선택상자선택항목}
-      {선택상자필터}
-      {선택상자항목}
-      {전체품목}
-      {선택상자조정}
-      {isHTMLElement}
-      {품목명입력란}
-      {배송형태}
-      {전자배송팝업내용}
-      {전자배송팝업열림}
-      {가격계산} />
+    <Selectbox bind:선택상자 bind:선택상자열림 bind:직접입력선택상자 bind:선택상자요소배열 bind:선택상자호출자 bind:품절팝업열림 bind:발주서상태 {선택상자선택항목} {선택상자필터} {선택상자항목} {전체품목} {선택상자조정} {isHTMLElement} {품목명입력란} {배송형태} {전자배송팝업내용} {전자배송팝업열림} {가격계산} />
   {/if}
 </div>
 {#if 엑셀데이터선택창 && 엑셀데이터.length}
-  <ExcelImport
-    bind:엑셀데이터
-    bind:엑셀데이터선택창
-    bind:품목리스트
-    bind:엑셀로딩 />
+  <ExcelImport bind:엑셀데이터 bind:엑셀데이터선택창 bind:품목리스트 bind:엑셀로딩 />
 {/if}
 {#if 품절팝업열림}
   <Portal target=".soldoutDialog .swal2-html-container">
@@ -1034,11 +902,7 @@
       <p>전자배송 받으실 이메일 주소를 입력하세요.</p>
       <p>(여러 주소로 받으실 경우 줄 단위로 구분해주세요.)</p>
       <br />
-      <textarea
-        bind:this={전자배송팝업내용}
-        class="wizard-3-textarea"
-        placeholder="여기에 수신 받을 이메일 주소를 입력해주세요."
-        style="width:100%; height: 200px; font-size: 15px; padding: 10px; line-height: 1.2"></textarea>
+      <textarea bind:this={전자배송팝업내용} class="wizard-3-textarea" placeholder="여기에 수신 받을 이메일 주소를 입력해주세요." style="width:100%; height: 200px; font-size: 15px; padding: 10px; line-height: 1.2"></textarea>
     </div>
   </Portal>
 {/if}
