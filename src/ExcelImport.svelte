@@ -10,6 +10,8 @@
 
   let 최대화여부 = $state(false);
 
+  let 다음 = $state(false);
+
   let step1box: HTMLElement | undefined = $state();
 
   const 필드양식 = [
@@ -22,6 +24,7 @@
     { label: "상세주소", width: "80%" },
     { label: "참고항목", width: "20%" },
     { label: "품목명", width: "100%" },
+    { label: "수량", width: "100%" },
   ];
 
   $effect(() => {
@@ -38,7 +41,7 @@
     const 상세주소 = 엑셀양식[6];
     const 참고항목 = 엑셀양식[7];
     const 품목명 = 엑셀양식[8];
-
+    const 수량 = 엑셀양식[9];
     const 추가될품목리스트: 품목리스트항목타입[] = 엑셀데이터.slice(엑셀제목줄 + 1).map((줄: 품목리스트항목타입) => {
       return {
         uuid: crypto.randomUUID(),
@@ -50,7 +53,7 @@
           brand: "",
           sell_price: 0,
           dome_price: 0,
-          qty: 0,
+          qty: 줄[수량],
           margin: 0,
           total_dome: 0,
           prop: "",
@@ -85,13 +88,8 @@
   }
 </script>
 
-<div
-  class="excelWindow"
-  transition:fade={{ duration: 100 }}>
-  <div
-    class="inner"
-    style={최대화여부 ? "width: 100%; height: 100%; border-radius: 0;" : ""}
-    transition:fly={{ y: 10, duration: 100 }}>
+<div class="excelWindow" transition:fade={{ duration: 100 }}>
+  <div class="inner" style={최대화여부 ? "width: 100%; height: 100%; border-radius: 0;" : ""} transition:fly={{ y: 10, duration: 100 }}>
     <div class="app_header">
       <span>엑셀데이터 선택중입니다.</span><button
         type="button"
@@ -102,30 +100,15 @@
           엑셀양식 = [];
         }}>닫기</button>
       <div class="gap"></div>
-      <button
-        type="button"
-        aria-label="창 크기 키우기/줄이기"
-        title="창 크기 키우기/줄이기"
-        onclick={() => (최대화여부 = !최대화여부)}>
+      <button type="button" aria-label="창 크기 키우기/줄이기" title="창 크기 키우기/줄이기" onclick={() => (최대화여부 = !최대화여부)}>
         <i class={["fas", 최대화여부 ? "fa-compress" : "fa-expand"]}></i>
       </button>
     </div>
     <div class="app_body">
       <div class="steps">
-        <details
-          open
-          bind:this={step1box}>
-          <summary
-            class="title app_label"
-            style="cursor: pointer"
-            >1단계: 먼저 어느 줄이 제목 줄인지 선택해주세요.
-          </summary>
-          <select
-            name="column"
-            id="column"
-            size="5"
-            bind:value={엑셀제목줄}
-            style="margin-bottom: 1em;">
+        <details open bind:this={step1box}>
+          <summary class="title app_label" style="cursor: pointer">1단계: 먼저 어느 줄이 제목 줄인지 선택해주세요. </summary>
+          <select name="column" id="column" size="5" bind:value={엑셀제목줄} style="margin-bottom: 1em;">
             {#each 엑셀데이터 as 줄, 인덱스}
               <option value={인덱스}>{줄.join(" | ")}</option>
             {/each}
@@ -135,40 +118,31 @@
           <div class="title app_label">2단계: 각 항목에 맞게 선택해주세요.</div>
           <div class="app_row">
             {#each 필드양식 as 선택항목, 인덱스}
-              <div
-                class="app_col"
-                style="--flex-basis: {선택항목.width}">
+              <div class="app_col" style="--flex-basis: {선택항목.width}">
                 <div>
-                  <label
-                    for={선택항목.label}
-                    class="app_label block">{선택항목.label}</label>
+                  <label for={선택항목.label} class="app_label block">{선택항목.label}</label>
                 </div>
-                <select
-                  name={선택항목.label}
-                  id={선택항목.label}
-                  bind:value={엑셀양식[인덱스]}>
-                  <option
-                    selected
-                    disabled
-                    value={-1}>선택</option>
+                <select name={선택항목.label} id={선택항목.label} bind:value={엑셀양식[인덱스]}>
+                  <option selected disabled value={-1}>선택</option>
                   <option value={-1}>없음</option>
                   {#each 엑셀데이터[엑셀제목줄] as 제목, 인덱스}
                     <option value={인덱스}>
-                      {제목}{엑셀양식.find(x => x === 인덱스) !== undefined ? " → " + 필드양식[인덱스].label : ""}
+                      {제목}{엑셀양식.find((x) => x === 인덱스) !== undefined ? " → " + 필드양식[엑셀양식.findIndex((x) => x === 인덱스)]?.label : ""}
                     </option>
                   {/each}
                 </select>
               </div>
             {/each}
-            <div
-              class="app_col"
-              style="--flex-basis: 100%; padding-top: 1em; display: flex; gap: 1em;">
-              <button
-                type="button"
-                onclick={() => 엑셀자료입력()}>교체</button
-              ><button
-                type="button"
-                onclick={() => 엑셀자료입력(true)}>추가</button>
+            <div class="app_col" style="margin-top: 1em">
+              <button type="button" onclick={() => (다음 = true)}>다음</button>
+            </div>
+          </div>
+        {/if}
+        {#if 다음}
+          <div class="title app_label">3단계: 품목명을 일치시켜주세요.</div>
+          <div class="app_row">
+            <div class="app_col" style="--flex-basis: 100%; margin-top: 1em; display: flex; gap: 1em;">
+              <button type="button" onclick={() => 엑셀자료입력()}>교체</button><button type="button" onclick={() => 엑셀자료입력(true)}>추가</button>
             </div>
           </div>
         {/if}
