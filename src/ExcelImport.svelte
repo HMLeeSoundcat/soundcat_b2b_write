@@ -2,10 +2,26 @@
   import { fade, fly } from "svelte/transition";
   import type { 품목리스트항목타입 } from "./type";
 
-  let { 엑셀데이터 = $bindable(), 엑셀데이터선택창 = $bindable(), 품목리스트 = $bindable(), 엑셀로딩 = $bindable() } = $props();
+  let { 엑셀데이터 = $bindable(), 엑셀데이터선택창 = $bindable(), 품목리스트 = $bindable(), 엑셀로딩 = $bindable(), 전체품목 } = $props();
 
   let 엑셀제목줄 = $state(-1);
   let 엑셀양식 = $state([]);
+  let 가공된엑셀데이터 = $state([
+    {
+      고객명: "",
+      전화번호1: "",
+      전화번호2: "",
+      우편번호: "",
+      배송메시지: "",
+      기본주소: "",
+      상세주소: "",
+      참고항목: "",
+      품목명: "",
+      수량: "",
+      브랜드: "",
+      실제품목명: "",
+    },
+  ]);
   $inspect(엑셀양식);
 
   let 최대화여부 = $state(false);
@@ -86,6 +102,40 @@
     엑셀데이터선택창 = false;
     엑셀로딩 = false;
   }
+
+  function 엑셀데이터후처리() {
+    if (엑셀양식.filter((x) => x !== undefined).length < 2) {
+      alert("최소한 고객명과 품목명은 매핑해주세요.");
+      return;
+    }
+    const 고객명 = 엑셀양식[0];
+    const 전화번호1 = 엑셀양식[1];
+    const 전화번호2 = 엑셀양식[2];
+    const 우편번호 = 엑셀양식[3];
+    const 배송메시지 = 엑셀양식[4];
+    const 기본주소 = 엑셀양식[5];
+    const 상세주소 = 엑셀양식[6];
+    const 참고항목 = 엑셀양식[7];
+    const 품목명 = 엑셀양식[8];
+    const 수량 = 엑셀양식[9];
+    가공된엑셀데이터 = 엑셀데이터.slice(엑셀제목줄 + 1).map((줄: string[]) => {
+      return {
+        고객명: 고객명 !== undefined ? 줄[고객명] : "",
+        전화번호1: 전화번호1 !== undefined ? 줄[전화번호1] : "",
+        전화번호2: 전화번호2 !== undefined ? 줄[전화번호2] : "",
+        우편번호: 우편번호 !== undefined ? 줄[우편번호] : "",
+        배송메시지: 배송메시지 !== undefined ? 줄[배송메시지] : "",
+        기본주소: 기본주소 !== undefined ? 줄[기본주소] : "",
+        상세주소: 상세주소 !== undefined ? 줄[상세주소] : "",
+        참고항목: 참고항목 !== undefined ? 줄[참고항목] : "",
+        품목명: 품목명 !== undefined ? 줄[품목명] : "",
+        수량: 수량 !== undefined ? 줄[수량] : "",
+        브랜드: "",
+        실제품목명: "",
+      };
+    });
+    다음 = true;
+  }
 </script>
 
 <div class="excelWindow" transition:fade={{ duration: 100 }}>
@@ -134,12 +184,40 @@
               </div>
             {/each}
             <div class="app_col" style="margin-top: 1em">
-              <button type="button" onclick={() => (다음 = true)}>다음</button>
+              <button type="button" onclick={() => 엑셀데이터후처리()}>다음</button>
             </div>
           </div>
         {/if}
         {#if 다음}
-          <div class="title app_label">3단계: 품목명을 일치시켜주세요.</div>
+          <div class="title app_label">3단계: 품목명을 일치시켜 주세요.</div>
+
+          {#each [...new Set(가공된엑셀데이터.map((줄) => 줄.품목명))] as 줄, 인덱스}
+            <div class="app_row" style="align-items: center; gap: 1em;">
+              <div class="app_col" style="--flex-basis: 50%;">
+                {줄}
+              </div>
+              <div class="app_col" style="--flex-basis: 50%;">
+                <select
+                  value={줄}
+                  {@attach (node) => {
+                    new TomSelect(node, {
+                      options: 전체품목.map((품목) => ({ value: 품목.상품명, text: 품목.상품명 })),
+                      create: false,
+                      onChange(value) {
+                        가공된엑셀데이터 = 가공된엑셀데이터.map((x) => {
+                          if (x.품목명 === 줄) {
+                            return { ...x, 실제품목명: value };
+                          }
+                          return x;
+                        });
+                      },
+                    });
+                  }}>
+                  <option value={-1}>선택</option>
+                </select>
+              </div>
+            </div>
+          {/each}
           <div class="app_row">
             <div class="app_col" style="--flex-basis: 100%; margin-top: 1em; display: flex; gap: 1em;">
               <button type="button" onclick={() => 엑셀자료입력()}>교체</button><button type="button" onclick={() => 엑셀자료입력(true)}>추가</button>

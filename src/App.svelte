@@ -11,7 +11,7 @@
   import { parseExcelWithWorker } from "./lib/parseExcel";
   import ExcelImport from "./ExcelImport.svelte";
   import type { 개별품목정보, 배송정보타입, 배송형태종류타입, 선택상자호출자타입, 임시배열타입, 전체품목리스트, 제품정보타입, 품목리스트항목타입 } from "./type";
-  import { isHTMLElement, 로케일숫자로표시, 숫자로변환, 계산_도매가, 계산_마진, 내용리셋 } from "./utils.svelte";
+  import { isHTMLElement, 로케일숫자로표시, 숫자로변환, 계산_도매가, 계산_마진, 내용리셋, 품목가져오기 } from "./utils.svelte";
   import Postinfo from "./Postinfo.svelte";
 
   const useDev = import.meta.env.MODE === "development";
@@ -64,7 +64,7 @@
   /** 검색상자(품목명 검색, 브랜드 검색 시 나타나는 선택상자)에 들어갈 값을 미리 생성해둔다. */
   let 검색상자전체품목: 임시배열타입[] | undefined = $derived.by(() => {
     let 임시배열: 임시배열타입[] | undefined = undefined;
-    Object.keys(전체품목).forEach(각브랜드 => {
+    Object.keys(전체품목).forEach((각브랜드) => {
       const items = 전체품목[각브랜드];
       if (Array.isArray(items)) {
         임시배열 = [
@@ -185,7 +185,7 @@
     }
 
     if (품목.productInfo.itemType !== 3 && (마진셋업?.brand_disc_amount || 계산할브랜드))
-      품목리스트.map(각품목 => {
+      품목리스트.map((각품목) => {
         if (!(각품목.productInfo.brand == 계산할브랜드 || 각품목.productInfo.brand == 품목.productInfo.brand)) return;
         const 품목정보 = 각품목.productInfo;
         const 마진셋업 = 각품목.default_margin;
@@ -341,7 +341,7 @@
     const 브랜드 = 품목.productInfo.brand;
 
     if (유형 == "브랜드") {
-      선택상자항목 = Object.keys(전체품목).map(x => ({ brand: x, product: undefined, PROD_CD: undefined, software: undefined, soldout: undefined, bypass_soldout: undefined }));
+      선택상자항목 = Object.keys(전체품목).map((x) => ({ brand: x, product: undefined, PROD_CD: undefined, software: undefined, soldout: undefined, bypass_soldout: undefined }));
     } else if (유형 == "품목명" && 브랜드) {
       const key = String(브랜드);
       const items = (전체품목 as 전체품목리스트)[key];
@@ -359,7 +359,7 @@
     if (유형) {
       선택상자조정();
       선택상자열림 = true;
-      선택상자선택항목 = 선택상자항목.findIndex(x => x.product == (요소 as HTMLInputElement).value || x.brand == (요소 as HTMLInputElement).value);
+      선택상자선택항목 = 선택상자항목.findIndex((x) => x.product == (요소 as HTMLInputElement).value || x.brand == (요소 as HTMLInputElement).value);
       요소.addEventListener("input", 선택상자검색);
       요소.addEventListener("keydown", 선택상자검색항목선택);
     }
@@ -479,11 +479,11 @@
         ) => {
           if (index == 0) cur.failed = false;
           const keys = Object.keys(cur) as (keyof 품목리스트항목타입)[];
-          keys.forEach(item => {
+          keys.forEach((item) => {
             if (배송형태 && ["대리배송", "퀵착불", "익일수령택배"].includes(배송형태)) {
               if (item == "deliveryInfo") {
                 const deliveryInfo = Object.keys(cur[item]) as (keyof 배송정보타입)[];
-                deliveryInfo.forEach(deliveryInfoItem => {
+                deliveryInfo.forEach((deliveryInfoItem) => {
                   const 값 = cur.deliveryInfo[deliveryInfoItem];
                   if (!값 && ["name", "hp1", "postcode", "addr1", "addr2"].includes(deliveryInfoItem)) {
                     acc.status = false;
@@ -497,7 +497,7 @@
 
             if (item == "productInfo") {
               const productInfo = Object.keys(cur[item]) as (keyof 제품정보타입)[];
-              productInfo.forEach(productInfoItem => {
+              productInfo.forEach((productInfoItem) => {
                 const 값 = cur.productInfo[productInfoItem];
                 if (!값) {
                   if (["product", "PROD_CD", "qty"].includes(productInfoItem)) {
@@ -567,28 +567,7 @@
   }
 
   onMount(async () => {
-    try {
-      const 품목가져오기 = await fetch("https://b2b.soundcat.com/page/get_products.php", {
-        headers: {
-          "Content-Type": "application/json",
-          UseDev: "user",
-        },
-        method: "POST",
-        body: JSON.stringify({
-          key: "b2b_write",
-          restrict: true,
-        }),
-      });
-
-      if (!품목가져오기.ok) {
-        throw new Error(`서버 응답 오류: ${품목가져오기.status}`);
-      }
-
-      전체품목 = await 품목가져오기.json();
-    } catch (err) {
-      console.error("품목 로딩 실패:", err);
-      alert("오류가 발생하여 전체 품목 리스트를 가져오지 못했습니다. 품목을 수동으로 입력하여 작성이 가능합니다.");
-    }
+    전체품목 = await 품목가져오기();
 
     let 배송형태셀렉터: HTMLSelectElement | null = document.querySelector("#ex_1"); // HTML DOM에서 가져온다.
     if (배송형태셀렉터) {
@@ -614,9 +593,9 @@
       품목리스트 = [
         ...품목리스트,
         //@ts-ignore
-        ...window.getExistingData().map(x => ({
+        ...window.getExistingData().map((x) => ({
           ...x,
-          default_margin: 전체품목?.[x.productInfo.brand]?.find(y => y.PROD_CD == x.productInfo.PROD_CD)?.default_margin,
+          default_margin: 전체품목?.[x.productInfo.brand]?.find((y) => y.PROD_CD == x.productInfo.PROD_CD)?.default_margin,
         })),
       ];
 
@@ -630,7 +609,7 @@
     if (window.getOrderType) 발주서상태 = window.getOrderType(); // 발주서 상태를 가져오는 함수이다. getOrderType() 함수는 write.skin.html.php 파일에 있다.
 
     window.addEventListener("formValidation", 유효성검사); // formValidation이라는 커스텀 이벤트를 리스닝하고, write.skin.html.php 함수에서 Submit 할 때 이 이벤트를 Dispatch하여 유효성검사 함수가 실행되도록 한다.
-    window.addEventListener("autosaveload", e => {
+    window.addEventListener("autosaveload", (e) => {
       // autosaveload라는 커스텀 이벤트를 리스닝하고, write.skin.html.php에서 이벤트를 Dispatch하면 거기서 자동저장된 발주서 정보를 가져와 품목리스트에 담아준다.
       //@ts-ignore
       const json = e.detail.json;
@@ -665,7 +644,7 @@
     if (품목리스트 && window.setData)
       //@ts-ignore
       window.setData(
-        품목리스트.map(x => {
+        품목리스트.map((x) => {
           const 반환할값 = structuredClone($state.snapshot(x));
           delete 반환할값.default_margin;
           return 반환할값;
@@ -679,7 +658,7 @@
     {#each 품목리스트 as 품목, 인덱스 (품목.uuid)}
       <div
         class="prod_item"
-        {@attach node => {
+        {@attach (node) => {
           node.scrollIntoView({ block: "nearest" });
         }}
         transition:fly={{ y: -10, duration: 100 }}>
@@ -692,7 +671,7 @@
                 type="radio"
                 id="id_{인덱스}_itemType1"
                 name="itemType_{인덱스}"
-                onchange={e => {
+                onchange={(e) => {
                   데모반영(e, 품목);
                 }}
                 value={0}
@@ -704,7 +683,7 @@
                 type="radio"
                 id="id_{인덱스}_itemType2"
                 name="itemType_{인덱스}"
-                onchange={e => {
+                onchange={(e) => {
                   데모반영(e, 품목);
                 }}
                 value={1}
@@ -716,7 +695,7 @@
                 type="radio"
                 id="id_{인덱스}_itemType3"
                 name="itemType_{인덱스}"
-                onchange={e => {
+                onchange={(e) => {
                   데모반영(e, 품목);
                 }}
                 value={2}
@@ -756,7 +735,7 @@
                   id="id_{인덱스}_brand"
                   bind:value={
                     () => 품목.productInfo.brand,
-                    v => {
+                    (v) => {
                       const 기존브랜드 = 품목.productInfo.brand;
                       const 기존브랜드할인가 = 품목.default_margin?.brand_disc_amount;
                       품목.productInfo.brand = v;
@@ -764,8 +743,8 @@
                       if (기존브랜드 != v && 기존브랜드할인가) 가격계산(undefined, 품목, undefined, 기존브랜드);
                     }
                   }
-                  onfocus={e => 선택상자열기(e, 품목, "브랜드", e.currentTarget, 인덱스)}
-                  onblur={e => {
+                  onfocus={(e) => 선택상자열기(e, 품목, "브랜드", e.currentTarget, 인덱스)}
+                  onblur={(e) => {
                     e.currentTarget.removeEventListener("input", 선택상자검색);
                     e.currentTarget.removeEventListener("keydown", 선택상자검색항목선택);
                   }} />
@@ -782,13 +761,13 @@
                   bind:this={품목명입력란[품목.uuid]}
                   bind:value={
                     () => 품목.productInfo.product,
-                    v => {
+                    (v) => {
                       품목.productInfo.product = v;
                       내용리셋(품목, true);
                     }
                   }
-                  onfocus={e => 선택상자열기(e, 품목, "품목명", e.currentTarget, 인덱스)}
-                  onblur={e => {
+                  onfocus={(e) => 선택상자열기(e, 품목, "품목명", e.currentTarget, 인덱스)}
+                  onblur={(e) => {
                     e.currentTarget.removeEventListener("input", 선택상자검색);
                     e.currentTarget.removeEventListener("keydown", 선택상자검색항목선택);
                   }} />
@@ -806,7 +785,13 @@
                   <label for="id_{인덱스}_sell_price" class="app_label block">소비자가</label>
                 </div>
                 <div class="app_text_input" data-label="원">
-                  <input type="text" id="id_{인덱스}_sell_price" class={[품목.productInfo.PROD_CD == "etc_001" && "editable"]} style="cursor: {품목.productInfo.PROD_CD !== 'etc_001' ? 'not-allowed' : 'normal'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price)), e => 가격계산(e, 품목, "소비자가")} readonly={품목.productInfo.PROD_CD !== "etc_001" || 품목.productInfo.itemType !== 3} />
+                  <input
+                    type="text"
+                    id="id_{인덱스}_sell_price"
+                    class={[품목.productInfo.PROD_CD == "etc_001" && "editable"]}
+                    style="cursor: {품목.productInfo.PROD_CD !== 'etc_001' ? 'not-allowed' : 'normal'}"
+                    bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.sell_price)), (e) => 가격계산(e, 품목, "소비자가")}
+                    readonly={품목.productInfo.PROD_CD !== "etc_001" || 품목.productInfo.itemType !== 3} />
                 </div>
               </div>
               <div class="app_col" style="--flex-basis: 20%;">
@@ -814,7 +799,13 @@
                   <label for="id_{인덱스}_dome_price" class="app_label block">공급단가</label>
                 </div>
                 <div class="app_text_input" data-label="원">
-                  <input type="text" id="id_{인덱스}_dome_price" class={[품목.productInfo.itemType === 3 && "editable"]} style="cursor: {품목.productInfo.itemType !== 3 ? 'not-allowed' : 'normal'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price)), e => 가격계산(e, 품목, "공급단가")} readonly={품목.productInfo.itemType !== 3 ? true : false} />
+                  <input
+                    type="text"
+                    id="id_{인덱스}_dome_price"
+                    class={[품목.productInfo.itemType === 3 && "editable"]}
+                    style="cursor: {품목.productInfo.itemType !== 3 ? 'not-allowed' : 'normal'}"
+                    bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price)), (e) => 가격계산(e, 품목, "공급단가")}
+                    readonly={품목.productInfo.itemType !== 3 ? true : false} />
                 </div>
               </div>
               <div class="app_col" style="--flex-basis: 10%;">
@@ -822,14 +813,28 @@
                   <label for="id_{인덱스}_qty" class="app_label block">수량</label>
                 </div>
                 <div class={["app_text_input", 품목.default_margin && !품목.productInfo.itemType && !할인조건계산(품목) && "qty"]} data-label="개" data-discqty={할인조건계산(품목, true)}>
-                  <input type="text" class={["app_text_input", 품목.productInfo.itemType === 3 && "editable"]} data-label="개" class:failed={품목.failed && !품목.productInfo.qty} readonly={품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? true : false} style="cursor: {품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? 'not-allowed' : 'normal'}" id="id_{인덱스}_qty" bind:value={() => new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty))), e => 가격계산(e, 품목, "수량")} />
+                  <input
+                    type="text"
+                    class={["app_text_input", 품목.productInfo.itemType === 3 && "editable"]}
+                    data-label="개"
+                    class:failed={품목.failed && !품목.productInfo.qty}
+                    readonly={품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? true : false}
+                    style="cursor: {품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? 'not-allowed' : 'normal'}"
+                    id="id_{인덱스}_qty"
+                    bind:value={() => new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty))), (e) => 가격계산(e, 품목, "수량")} />
                 </div>
               </div>
               <div class="app_col" style="--flex-basis: 10%;">
                 <div>
                   <label for="id_{인덱스}_margin" class="app_label block">마진(%)</label>
                 </div>
-                <input type="text" id="id_{인덱스}_margin" class={[품목.productInfo.itemType === 3 && "editable"]} style="cursor: {품목.productInfo.itemType !== 3 ? 'not-allowed' : 'normal'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin)), e => 가격계산(e, 품목, "마진")} readonly={품목.productInfo.itemType !== 3 ? true : false} />
+                <input
+                  type="text"
+                  id="id_{인덱스}_margin"
+                  class={[품목.productInfo.itemType === 3 && "editable"]}
+                  style="cursor: {품목.productInfo.itemType !== 3 ? 'not-allowed' : 'normal'}"
+                  bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin)), (e) => 가격계산(e, 품목, "마진")}
+                  readonly={품목.productInfo.itemType !== 3 ? true : false} />
               </div>
               <div class="app_col" style="--flex-basis: 40%;">
                 <div>
@@ -867,11 +872,29 @@
   </div>
   {#if 선택상자열림}
     <!-- 선택상자를 열 때 컴포넌트가 노출된다. -->
-    <Selectbox bind:선택상자 bind:선택상자열림 bind:직접입력선택상자 bind:선택상자요소배열 bind:선택상자호출자 bind:품절팝업열림 bind:발주서상태 {선택상자선택항목} {선택상자필터} {선택상자항목} {전체품목} {선택상자조정} {isHTMLElement} {품목명입력란} {배송형태} {전자배송팝업내용} {전자배송팝업열림} {가격계산} />
+    <Selectbox
+      bind:선택상자
+      bind:선택상자열림
+      bind:직접입력선택상자
+      bind:선택상자요소배열
+      bind:선택상자호출자
+      bind:품절팝업열림
+      bind:발주서상태
+      {선택상자선택항목}
+      {선택상자필터}
+      {선택상자항목}
+      {전체품목}
+      {선택상자조정}
+      {isHTMLElement}
+      {품목명입력란}
+      {배송형태}
+      {전자배송팝업내용}
+      {전자배송팝업열림}
+      {가격계산} />
   {/if}
 </div>
 {#if 엑셀데이터선택창 && 엑셀데이터.length}
-  <ExcelImport bind:엑셀데이터 bind:엑셀데이터선택창 bind:품목리스트 bind:엑셀로딩 />
+  <ExcelImport bind:엑셀데이터 bind:엑셀데이터선택창 bind:품목리스트 bind:엑셀로딩 {전체품목} />
 {/if}
 {#if 품절팝업열림}
   <Portal target=".soldoutDialog .swal2-html-container">
