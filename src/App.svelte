@@ -13,8 +13,14 @@
   import type { 개별품목정보, 배송정보타입, 배송형태종류타입, 선택상자호출자타입, 임시배열타입, 전체품목리스트, 제품정보타입, 품목리스트항목타입 } from "./type";
   import { isHTMLElement, 로케일숫자로표시, 숫자로변환, 계산_도매가, 계산_마진, 내용리셋 } from "./utils.svelte";
   import Postinfo from "./Postinfo.svelte";
+  import { flip } from "svelte/animate";
 
   const useDev = import.meta.env.MODE === "development";
+
+  /**
+   * 입력값 고정 여부
+   */
+  let FORCED = $state(false);
 
   let 선택상자열림 = $state(false);
   let 선택상자항목: 임시배열타입[] = $state([]);
@@ -156,7 +162,7 @@
           품목정보.dome_price = 계산_도매가(숫자값, Number(품목정보.margin));
           break;
         case "공급단가":
-          품목정보.dome_price = Math.min(숫자값, 품목정보.sell_price ?? 0);
+          품목정보.dome_price = Math.min(숫자값, 품목정보.sell_price || Number.MAX_SAFE_INTEGER);
           품목정보.margin = 계산_마진(Number(품목정보.sell_price), 품목정보.dome_price) || 0;
           break;
         case "마진":
@@ -165,6 +171,7 @@
           break;
         case "수량":
           품목정보.qty = Math.floor(숫자값);
+          if (!FORCED) break;
 
           const 할인공급가 = 숫자로변환(마진셋업?.per_user?.discount_price ?? 마진셋업?.discount_price);
           const 할인마진 = 숫자로변환(마진셋업?.per_user?.discount_margin ?? 마진셋업?.discount_margin);
@@ -184,7 +191,7 @@
       품목정보.total_dome = Number(품목정보.dome_price) * Number(품목정보.qty);
     }
 
-    if (품목.productInfo.itemType !== 3 && (마진셋업?.brand_disc_amount || 계산할브랜드))
+    if (FORCED && 품목.productInfo.itemType !== 3 && (마진셋업?.brand_disc_amount || 계산할브랜드))
       품목리스트.map(각품목 => {
         if (!(각품목.productInfo.brand == 계산할브랜드 || 각품목.productInfo.brand == 품목.productInfo.brand)) return;
         const 품목정보 = 각품목.productInfo;
@@ -234,9 +241,9 @@
    * @param 품목 발주서 품목 요소
    */
   function 데모반영(e: Event, 품목: 품목리스트항목타입) {
-    const 값 = (e?.currentTarget as HTMLButtonElement)?.value;
-    if (parseInt(값)) {
-      품목.productInfo.margin = parseInt(String(값)) == 1 ? 40 : 50;
+    const 값 = parseInt((e?.currentTarget as HTMLButtonElement)?.value);
+    if (값 == 1 || 값 == 2) {
+      품목.productInfo.margin = 값 == 1 ? 40 : 50;
       품목.productInfo.qty = 1;
     } else {
       품목.productInfo.margin = 0;
@@ -249,7 +256,8 @@
    * 수동 입력을 활성화한다.
    * @param 품목 발주서 품목 요소
    */
-  async function 수동입력활성화(품목: 품목리스트항목타입) {
+  async function 수동입력활성화({ 품목, 조용히 }: { 품목: 품목리스트항목타입; 조용히?: boolean }) {
+    if (조용히) return (품목.productInfo.itemType = 3);
     if (품목.productInfo.itemType !== 3) return;
 
     const 팝업 = await Swal.fire({
@@ -556,7 +564,6 @@
 
     try {
       엑셀데이터 = await parseExcelWithWorker(파일);
-      console.log(엑셀데이터);
     } catch (err) {
       error = err as Error;
     } finally {
@@ -567,6 +574,8 @@
   }
 
   onMount(async () => {
+    //@ts-ignore
+    if (window.checkEnforced) FORCED = window.checkEnforced();
     try {
       const 품목가져오기 = await fetch("https://b2b.soundcat.com/page/get_products.php", {
         headers: {
@@ -576,7 +585,7 @@
         method: "POST",
         body: JSON.stringify({
           key: "b2b_write",
-          restrict: true,
+          restrict: FORCED,
         }),
       });
 
@@ -679,10 +688,13 @@
     {#each 품목리스트 as 품목, 인덱스 (품목.uuid)}
       <div
         class="prod_item"
+        animate:flip={{ duration: 200 }}
         {@attach node => {
           node.scrollIntoView({ block: "nearest" });
+          if (!FORCED) 수동입력활성화({ 품목, 조용히: true });
         }}
-        transition:fly={{ y: -10, duration: 100 }}>
+        in:fly={{ x: -20, duration: 200 }}
+        out:fly={{ x: 20, duration: 200 }}>
         <div class="app_header">
           <button type="button" class="arcodian" onclick={() => (품목.collapsed = !품목.collapsed)} aria-label="품목 접기/펼치기" title="품목 접기/펼치기">{@html 품목.collapsed ? `<i class="fas fa-chevron-right"></i>` : `<i class="fas fa-chevron-down"></i>`}</button>
           <span class="item_title"><strong>품목{인덱스 + 1}</strong></span><span class="hori_div"></span>
@@ -695,7 +707,7 @@
                 onchange={e => {
                   데모반영(e, 품목);
                 }}
-                value={0}
+                value={!FORCED ? 3 : 0}
                 bind:group={품목.productInfo.itemType} />
               <span>일반</span>
             </label>
@@ -723,10 +735,12 @@
                 bind:group={품목.productInfo.itemType} />
               <span>데모(50%)</span>
             </label>
-            <label class="app_radio">
-              <input type="radio" id="id_{인덱스}_itemType4" name="itemType_{인덱스}" onchange={() => 수동입력활성화(품목)} value={3} bind:group={품목.productInfo.itemType} />
-              <span>특별건</span>
-            </label>
+            {#if FORCED}
+              <label class="app_radio">
+                <input type="radio" id="id_{인덱스}_itemType4" name="itemType_{인덱스}" onchange={() => 수동입력활성화({ 품목 })} value={3} bind:group={품목.productInfo.itemType} />
+                <span>특별건</span>
+              </label>
+            {/if}
           </div>
           <div class="action">
             {#if 품목리스트.length > 1}
@@ -814,7 +828,7 @@
                   <label for="id_{인덱스}_dome_price" class="app_label block">공급단가</label>
                 </div>
                 <div class="app_text_input" data-label="원">
-                  <input type="text" id="id_{인덱스}_dome_price" class={[품목.productInfo.itemType === 3 && "editable"]} style="cursor: {품목.productInfo.itemType !== 3 ? 'not-allowed' : 'normal'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price)), e => 가격계산(e, 품목, "공급단가")} readonly={품목.productInfo.itemType !== 3 ? true : false} />
+                  <input type="text" id="id_{인덱스}_dome_price" class={[FORCED && 품목.productInfo.itemType === 3 && "editable"]} style="cursor: {품목.productInfo.itemType == 3 ? 'normal' : 'not-allowed'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price)), e => 가격계산(e, 품목, "공급단가")} readonly={품목.productInfo.itemType == 3 ? false : true} />
                 </div>
               </div>
               <div class="app_col" style="--flex-basis: 10%;">
@@ -822,14 +836,14 @@
                   <label for="id_{인덱스}_qty" class="app_label block">수량</label>
                 </div>
                 <div class={["app_text_input", 품목.default_margin && !품목.productInfo.itemType && !할인조건계산(품목) && "qty"]} data-label="개" data-discqty={할인조건계산(품목, true)}>
-                  <input type="text" class={["app_text_input", 품목.productInfo.itemType === 3 && "editable"]} data-label="개" class:failed={품목.failed && !품목.productInfo.qty} readonly={품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? true : false} style="cursor: {품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? 'not-allowed' : 'normal'}" id="id_{인덱스}_qty" bind:value={() => new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty))), e => 가격계산(e, 품목, "수량")} />
+                  <input type="text" class={["app_text_input", FORCED && 품목.productInfo.itemType === 3 && "editable"]} data-label="개" class:failed={품목.failed && !품목.productInfo.qty} readonly={품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? true : false} style="cursor: {품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? 'not-allowed' : 'normal'}" id="id_{인덱스}_qty" bind:value={() => new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty))), e => 가격계산(e, 품목, "수량")} />
                 </div>
               </div>
               <div class="app_col" style="--flex-basis: 10%;">
                 <div>
                   <label for="id_{인덱스}_margin" class="app_label block">마진(%)</label>
                 </div>
-                <input type="text" id="id_{인덱스}_margin" class={[품목.productInfo.itemType === 3 && "editable"]} style="cursor: {품목.productInfo.itemType !== 3 ? 'not-allowed' : 'normal'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin)), e => 가격계산(e, 품목, "마진")} readonly={품목.productInfo.itemType !== 3 ? true : false} />
+                <input type="text" id="id_{인덱스}_margin" class={[FORCED && 품목.productInfo.itemType === 3 && "editable"]} style="cursor: {품목.productInfo.itemType == 3 ? 'normal' : 'not-allowed'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin)), e => 가격계산(e, 품목, "마진")} readonly={품목.productInfo.itemType == 3 ? false : true} />
               </div>
               <div class="app_col" style="--flex-basis: 40%;">
                 <div>
@@ -846,7 +860,13 @@
     {/each}
   </div>
   <div class="app_footer app_row">
-    <button type="button" onclick={() => 품목추가({ 복제: true })}>추가</button>
+    <button
+      type="button"
+      onclick={e => {
+        품목추가({ 복제: true });
+        const target = e.currentTarget;
+        setTimeout(() => target.scrollIntoView({ block: "nearest" }), 0);
+      }}>추가</button>
     <div class="app_col" style="display: flex; align-items:center; justify-content: flex-end;">
       <div style="margin: 0; padding: 0.5em 0.5em calc(0.5em - 1px); border: 1px solid #ddd; border-right: none; box-sizing: border-box; background: #eee; border-radius: 4px 0 0 4px">총합계</div>
       <div class="app_text_input" data-label="원">
@@ -867,7 +887,7 @@
   </div>
   {#if 선택상자열림}
     <!-- 선택상자를 열 때 컴포넌트가 노출된다. -->
-    <Selectbox bind:선택상자 bind:선택상자열림 bind:직접입력선택상자 bind:선택상자요소배열 bind:선택상자호출자 bind:품절팝업열림 bind:발주서상태 {선택상자선택항목} {선택상자필터} {선택상자항목} {전체품목} {선택상자조정} {isHTMLElement} {품목명입력란} {배송형태} {전자배송팝업내용} {전자배송팝업열림} {가격계산} />
+    <Selectbox bind:선택상자 bind:선택상자열림 bind:직접입력선택상자 bind:선택상자요소배열 bind:선택상자호출자 bind:품절팝업열림 bind:발주서상태 {선택상자선택항목} {선택상자필터} {선택상자항목} {전체품목} {선택상자조정} {isHTMLElement} {품목명입력란} {배송형태} {전자배송팝업내용} {전자배송팝업열림} {가격계산} {FORCED} />
   {/if}
 </div>
 {#if 엑셀데이터선택창 && 엑셀데이터.length}

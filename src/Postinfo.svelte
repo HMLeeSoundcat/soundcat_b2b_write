@@ -10,7 +10,7 @@
     await tick();
 
     //@ts-ignore
-    new daum.Postcode({
+    new kakao.Postcode({
       oncomplete: (data: any) => {
         let addr = "";
         let extraAddr = "";
@@ -53,61 +53,31 @@
 </script>
 
 <div class="deliveryInfo app_row">
-  <div
-    class="app_col"
-    style="--flex-basis: 33%;">
+  <div class="app_col" style="--flex-basis: 33%;">
     <div>
-      <label
-        for="id_{인덱스}_name"
-        class="app_label block">고객명</label>
+      <label for="id_{인덱스}_name" class="app_label block">고객명</label>
     </div>
-    <input
-      type="text"
-      id="id_{인덱스}_name"
-      class:failed={품목.failed && !품목.deliveryInfo.name}
-      bind:value={품목.deliveryInfo.name} />
+    <input type="text" id="id_{인덱스}_name" class:failed={품목.failed && !품목.deliveryInfo.name} bind:value={품목.deliveryInfo.name} />
   </div>
-  <div
-    class="app_col"
-    style="--flex-basis: 33%;">
+  <div class="app_col" style="--flex-basis: 33%;">
     <div>
-      <label
-        for="id_{인덱스}_hp1"
-        class="app_label block">전화번호1</label>
+      <label for="id_{인덱스}_hp1" class="app_label block">전화번호1</label>
     </div>
-    <input
-      type="text"
-      id="id_{인덱스}_hp1"
-      class:failed={품목.failed && !품목.deliveryInfo.hp1}
-      bind:value={품목.deliveryInfo.hp1} />
+    <input type="text" id="id_{인덱스}_hp1" class:failed={품목.failed && !품목.deliveryInfo.hp1} bind:value={품목.deliveryInfo.hp1} />
   </div>
-  <div
-    class="app_col"
-    style="--flex-basis: 33%;">
+  <div class="app_col" style="--flex-basis: 33%;">
     <div>
-      <label
-        for="id_{인덱스}_hp2"
-        class="app_label block">전화번호2</label>
+      <label for="id_{인덱스}_hp2" class="app_label block">전화번호2</label>
     </div>
-    <input
-      type="text"
-      id="id_{인덱스}_hp2"
-      bind:value={품목.deliveryInfo.hp2} />
+    <input type="text" id="id_{인덱스}_hp2" bind:value={품목.deliveryInfo.hp2} />
   </div>
-  <div
-    class="app_col"
-    style="--flex-basis: 100%;">
+  <div class="app_col" style="--flex-basis: 100%;">
     <div class="app_label block">
-      <span style="margin-right: 0.5em">주소</span><button
-        type="button"
-        onclick={e => 우편번호검색(품목)}>주소 검색</button>
+      <span style="margin-right: 0.5em">주소</span><button type="button" onclick={e => 우편번호검색(품목)}>주소 검색</button>
     </div>
   </div>
   {#if 우편번호검색열림[품목.uuid]}
-    <div
-      class="postcodebox app_col"
-      style="--flex-basis: 100%"
-      transition:fly={{ y: -10, duration: 100 }}>
+    <div class="postcodebox app_col" style="--flex-basis: 100%" transition:fly={{ y: -10, duration: 100 }}>
       <div class="app_header">
         우편번호검색
         <button
@@ -116,55 +86,23 @@
             우편번호검색열림[품목.uuid] = false;
           }}>닫기</button>
       </div>
-      <div
-        class="app_body"
-        bind:this={우편번호검색상자[품목.uuid]}>
-      </div>
+      <div class="app_body" bind:this={우편번호검색상자[품목.uuid]}></div>
     </div>
   {/if}
-  <div
-    class="app_col"
-    style="--flex-basis: 50%">
-    <input
-      type="text"
-      placeholder="우편번호"
-      class:failed={품목.failed && !품목.deliveryInfo.postcode}
-      bind:value={품목.deliveryInfo.postcode} />
+  <div class="app_col" style="--flex-basis: 50%">
+    <input type="text" placeholder="우편번호" class:failed={품목.failed && !품목.deliveryInfo.postcode} bind:value={품목.deliveryInfo.postcode} />
   </div>
-  <div
-    class="app_col"
-    style="--flex-basis: 50%">
-    <input
-      type="text"
-      placeholder="배송메시지"
-      bind:value={품목.deliveryInfo.msg} />
+  <div class="app_col" style="--flex-basis: 50%">
+    <input type="text" placeholder="배송메시지" bind:value={품목.deliveryInfo.msg} />
   </div>
-  <div
-    class="app_col"
-    style="--flex-basis: 100%">
-    <input
-      type="text"
-      placeholder="기본주소"
-      class:failed={품목.failed && !품목.deliveryInfo.addr1}
-      bind:value={품목.deliveryInfo.addr1} />
+  <div class="app_col" style="--flex-basis: 100%">
+    <input type="text" placeholder="기본주소" class:failed={품목.failed && !품목.deliveryInfo.addr1} bind:value={품목.deliveryInfo.addr1} />
   </div>
-  <div
-    class="app_col"
-    style="--flex-basis: 50%">
-    <input
-      id="addr2_{품목?.uuid}"
-      type="text"
-      placeholder="상세주소"
-      class:failed={품목.failed && !품목.deliveryInfo.addr2}
-      bind:value={품목.deliveryInfo.addr2} />
+  <div class="app_col" style="--flex-basis: 50%">
+    <input id="addr2_{품목?.uuid}" type="text" placeholder="상세주소" class:failed={품목.failed && !품목.deliveryInfo.addr2} bind:value={품목.deliveryInfo.addr2} />
   </div>
-  <div
-    class="app_col"
-    style="--flex-basis: 50%">
-    <input
-      type="text"
-      placeholder="참고항목"
-      bind:value={품목.deliveryInfo.addr3} />
+  <div class="app_col" style="--flex-basis: 50%">
+    <input type="text" placeholder="참고항목" bind:value={품목.deliveryInfo.addr3} />
   </div>
 </div>
 <hr />

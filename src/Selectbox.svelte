@@ -28,9 +28,10 @@
     전자배송팝업열림: boolean;
     발주서상태: string;
     가격계산: (e: number | string | undefined, 품목: 품목리스트항목타입, 필드: string | undefined, 계산할브랜드: string | undefined) => void;
+    FORCED: boolean;
   }
 
-  let { 전체품목, 선택상자 = $bindable(), 선택상자선택항목, 선택상자호출자 = $bindable(), 선택상자열림 = $bindable(), 선택상자조정, 직접입력선택상자 = $bindable(), 선택상자필터, 선택상자항목, 선택상자요소배열 = $bindable(), isHTMLElement, 품절팝업열림 = $bindable(), 품목명입력란, 배송형태, 전자배송팝업내용, 전자배송팝업열림, 발주서상태 = $bindable(), 가격계산 }: 프롭스타입 = $props();
+  let { 전체품목, 선택상자 = $bindable(), 선택상자선택항목, 선택상자호출자 = $bindable(), 선택상자열림 = $bindable(), 선택상자조정, 직접입력선택상자 = $bindable(), 선택상자필터, 선택상자항목, 선택상자요소배열 = $bindable(), isHTMLElement, 품절팝업열림 = $bindable(), 품목명입력란, 배송형태, 전자배송팝업내용, 전자배송팝업열림, 발주서상태 = $bindable(), 가격계산, FORCED }: 프롭스타입 = $props();
 
   function 선택상자닫기(e: Event) {
     if (!((isHTMLElement(e.target) && isHTMLElement(선택상자) && 선택상자.contains(e.target)) || (isHTMLElement(선택상자호출자.요소) && isHTMLElement(e.target) && 선택상자호출자.요소.contains(e.target)))) {
@@ -123,6 +124,7 @@
     if (품목) {
       const 마진셋업 = typeof 전체품목[브랜드][인덱스].default_margin == "object" ? 전체품목[브랜드][인덱스].default_margin : undefined;
       품목.default_margin = 마진셋업;
+      if (!FORCED) return;
       if (!마진셋업) 품목.productInfo.itemType = 3;
       const 현재수량 = 품목.productInfo.qty ?? 0;
       const 타겟마진 = 현재수량 >= 숫자로변환(마진셋업?.per_user?.discount_qty ?? 마진셋업?.discount_qty, 999) ? 숫자로변환(마진셋업?.per_user?.discount_margin ?? 마진셋업?.discount_margin) : 숫자로변환(마진셋업?.per_user?.default_margin ?? 마진셋업?.default_margin);
@@ -274,14 +276,8 @@
   }
 </script>
 
-<svelte:window
-  onpointerdown={선택상자닫기}
-  onresize={선택상자조정}
-  onscroll={선택상자조정} />
-<div
-  class="select_box"
-  bind:this={선택상자}
-  transition:fly={{ y: -10, duration: 100 }}>
+<svelte:window onpointerdown={선택상자닫기} onresize={선택상자조정} onscroll={선택상자조정} />
+<div class="select_box" bind:this={선택상자} transition:fly={{ y: -10, duration: 100 }}>
   <ul>
     <li>
       <button
@@ -301,17 +297,11 @@
     </li>
     {#each Array.isArray(선택상자필터) ? 선택상자필터 : 선택상자항목 as 선택항목, 인덱스}
       <li class={[선택항목.checking && "checking"]}>
-        <button
-          type="button"
-          class:searched={선택상자선택항목 == 인덱스}
-          onclick={() => 선택상자항목선택(선택항목)}
-          bind:this={선택상자요소배열[인덱스]}>
+        <button type="button" class:searched={선택상자선택항목 == 인덱스} onclick={() => 선택상자항목선택(선택항목)} bind:this={선택상자요소배열[인덱스]}>
           <span class="selectbox-text">{선택상자호출자.유형 == "브랜드" ? 선택항목.brand : 선택항목.product}{typeof 선택항목 != "string" && 선택항목.soldout && !선택항목.software ? " (품절)" : ""}</span>
           {#if 선택항목.stock_level}
             <span class="stock_level">
-              <span
-                class="stock_level_active"
-                data-stock-level={선택항목.stock_level ?? 0}>
+              <span class="stock_level_active" data-stock-level={선택항목.stock_level ?? 0}>
                 {#each new Array(선택항목.stock_level)}
                   <span class="stock_level_bar"></span>
                 {/each}
