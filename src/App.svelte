@@ -11,7 +11,7 @@
   import { parseExcelWithWorker } from "./lib/parseExcel";
   import ExcelImport from "./ExcelImport.svelte";
   import type { 개별품목정보, 배송정보타입, 배송형태종류타입, 선택상자호출자타입, 임시배열타입, 전체품목리스트, 제품정보타입, 품목리스트항목타입 } from "./type";
-  import { isHTMLElement, 로케일숫자로표시, 숫자로변환, 계산_도매가, 계산_마진, 내용리셋 } from "./utils.svelte";
+  import { isHTMLElement, 로케일숫자로표시, 숫자로변환, 계산_도매가, 계산_마진, 내용리셋, 품목가져오기 } from "./utils.svelte";
   import Postinfo from "./Postinfo.svelte";
   import { flip } from "svelte/animate";
 
@@ -576,28 +576,8 @@
   onMount(async () => {
     //@ts-ignore
     if (window.checkEnforced) FORCED = window.checkEnforced();
-    try {
-      const 품목가져오기 = await fetch("https://b2b.soundcat.com/page/get_products.php", {
-        headers: {
-          "Content-Type": "application/json",
-          UseDev: "user",
-        },
-        method: "POST",
-        body: JSON.stringify({
-          key: "b2b_write",
-          restrict: FORCED,
-        }),
-      });
 
-      if (!품목가져오기.ok) {
-        throw new Error(`서버 응답 오류: ${품목가져오기.status}`);
-      }
-
-      전체품목 = await 품목가져오기.json();
-    } catch (err) {
-      console.error("품목 로딩 실패:", err);
-      alert("오류가 발생하여 전체 품목 리스트를 가져오지 못했습니다. 품목을 수동으로 입력하여 작성이 가능합니다.");
-    }
+    전체품목 = await 품목가져오기();
 
     let 배송형태셀렉터: HTMLSelectElement | null = document.querySelector("#ex_1"); // HTML DOM에서 가져온다.
     if (배송형태셀렉터) {
@@ -891,7 +871,7 @@
   {/if}
 </div>
 {#if 엑셀데이터선택창 && 엑셀데이터.length}
-  <ExcelImport bind:엑셀데이터 bind:엑셀데이터선택창 bind:품목리스트 bind:엑셀로딩 />
+  <ExcelImport bind:엑셀데이터 bind:엑셀데이터선택창 bind:품목리스트 bind:엑셀로딩 {전체품목} />
 {/if}
 {#if 품절팝업열림}
   <Portal target=".soldoutDialog .swal2-html-container">
