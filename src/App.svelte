@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-  import { onDestroy, onMount, tick } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { fly } from "svelte/transition";
   import Portal from "svelte-portal";
   import type SwalType from "sweetalert2";
@@ -11,16 +11,17 @@
   import { parseExcelWithWorker } from "./lib/parseExcel";
   import ExcelImport from "./ExcelImport.svelte";
   import type { 개별품목정보, 배송정보타입, 배송형태종류타입, 선택상자호출자타입, 임시배열타입, 전체품목리스트, 제품정보타입, 품목리스트항목타입 } from "./type";
-  import { isHTMLElement, 로케일숫자로표시, 숫자로변환, 계산_도매가, 계산_마진, 내용리셋, 품목가져오기 } from "./utils.svelte";
+  import { isHTMLElement, 로케일숫자로표시, 숫자로변환, 계산_도매가, 계산_마진, 내용리셋, 품목가져오기, FORCED, setForced } from "./utils.svelte";
   import Postinfo from "./Postinfo.svelte";
   import { flip } from "svelte/animate";
 
   const useDev = import.meta.env.MODE === "development";
 
-  /**
-   * 입력값 고정 여부
-   */
-  let FORCED = $state(false);
+  let realForced = $state(false);
+
+  FORCED.subscribe(value => {
+    realForced = value;
+  });
 
   let 선택상자열림 = $state(false);
   let 선택상자항목: 임시배열타입[] = $state([]);
@@ -144,6 +145,7 @@
    * @param 계산할브랜드 브랜드 할인 최소 금액이 지정된 경우를 위해 현재 선택된 브랜드를 가져온다.
    */
   async function 가격계산(e: number | string | undefined, 품목: 품목리스트항목타입, 필드: string | undefined, 계산할브랜드: string | undefined = undefined) {
+    console.log("가격계산 실행", { e, 품목, 필드, 계산할브랜드 });
     const 품목정보 = 품목.productInfo;
     const 마진셋업 = 품목.default_margin;
 
@@ -171,7 +173,7 @@
           break;
         case "수량":
           품목정보.qty = Math.floor(숫자값);
-          if (!FORCED) break;
+          if (!realForced) break;
 
           const 할인공급가 = 숫자로변환(마진셋업?.per_user?.discount_price ?? 마진셋업?.discount_price);
           const 할인마진 = 숫자로변환(마진셋업?.per_user?.discount_margin ?? 마진셋업?.discount_margin);
@@ -191,7 +193,7 @@
       품목정보.total_dome = Number(품목정보.dome_price) * Number(품목정보.qty);
     }
 
-    if (FORCED && 품목.productInfo.itemType !== 3 && (마진셋업?.brand_disc_amount || 계산할브랜드))
+    if (realForced && 품목.productInfo.itemType !== 3 && (마진셋업?.brand_disc_amount || 계산할브랜드)) {
       품목리스트.map(각품목 => {
         if (!(각품목.productInfo.brand == 계산할브랜드 || 각품목.productInfo.brand == 품목.productInfo.brand)) return;
         const 품목정보 = 각품목.productInfo;
@@ -210,6 +212,7 @@
         품목정보.dome_price = 타겟공급가;
         품목정보.total_dome = Number(품목정보.dome_price) * Number(품목정보.qty);
       });
+    }
   }
 
   /**
@@ -280,49 +283,54 @@
     옵션:
       | {
           복제?: boolean;
-          데이터?: 품목리스트항목타입[];
+          데이터?: 품목리스트항목타입[] | 품목리스트항목타입;
         }
       | undefined = undefined,
   ) {
-    품목리스트 = [
-      ...품목리스트,
-      옵션 && 옵션.복제
-        ? (() => {
-            const 원본: 품목리스트항목타입 = 품목리스트[품목리스트.length - 1];
-            const 사본: 품목리스트항목타입 = JSON.parse(JSON.stringify(원본));
-            사본.uuid = crypto.randomUUID();
-            return 사본;
-          })()
-        : {
-            uuid: crypto.randomUUID(),
-            collapsed: false,
-            failed: false,
-            productInfo: {
-              itemType: 0,
-              brand: undefined,
-              product: undefined,
-              PROD_CD: undefined,
-              prop: undefined,
-              useprop: false,
-              sell_price: 0,
-              dome_price: 0,
-              qty: 0,
-              margin: 0,
-              total_dome: 0,
-              soldout: false,
+    if (옵션 && 옵션.데이터) {
+      const 데이터 = Array.isArray(옵션.데이터) ? 옵션.데이터 : [옵션.데이터];
+      품목리스트 = [...품목리스트, ...데이터];
+    } else {
+      품목리스트 = [
+        ...품목리스트,
+        옵션 && 옵션.복제
+          ? (() => {
+              const 원본: 품목리스트항목타입 = 품목리스트[품목리스트.length - 1];
+              const 사본: 품목리스트항목타입 = JSON.parse(JSON.stringify(원본));
+              사본.uuid = crypto.randomUUID();
+              return 사본;
+            })()
+          : {
+              uuid: crypto.randomUUID(),
+              collapsed: false,
+              failed: false,
+              productInfo: {
+                itemType: 0,
+                brand: undefined,
+                product: undefined,
+                PROD_CD: undefined,
+                prop: undefined,
+                useprop: false,
+                sell_price: 0,
+                dome_price: 0,
+                qty: 0,
+                margin: 0,
+                total_dome: 0,
+                soldout: false,
+              },
+              deliveryInfo: {
+                name: undefined,
+                hp1: undefined,
+                hp2: undefined,
+                addr1: undefined,
+                addr2: undefined,
+                addr3: undefined,
+                postcode: undefined,
+                msg: undefined,
+              },
             },
-            deliveryInfo: {
-              name: undefined,
-              hp1: undefined,
-              hp2: undefined,
-              addr1: undefined,
-              addr2: undefined,
-              addr3: undefined,
-              postcode: undefined,
-              msg: undefined,
-            },
-          },
-    ];
+      ];
+    }
     const 마지막품목 = 품목리스트.at(-1);
     if (마지막품목) 가격계산(undefined, 마지막품목, undefined, 마지막품목.productInfo.brand);
   }
@@ -575,7 +583,7 @@
 
   onMount(async () => {
     //@ts-ignore
-    if (window.checkEnforced) FORCED = window.checkEnforced();
+    if (window.checkEnforced) setForced(window.checkEnforced());
 
     전체품목 = await 품목가져오기();
 
@@ -671,7 +679,7 @@
         animate:flip={{ duration: 200 }}
         {@attach node => {
           node.scrollIntoView({ block: "nearest" });
-          if (!FORCED) 수동입력활성화({ 품목, 조용히: true });
+          if (!realForced) 수동입력활성화({ 품목, 조용히: true });
         }}
         in:fly={{ x: -20, duration: 200 }}
         out:fly={{ x: 20, duration: 200 }}>
@@ -687,7 +695,7 @@
                 onchange={e => {
                   데모반영(e, 품목);
                 }}
-                value={!FORCED ? 3 : 0}
+                value={!realForced ? 3 : 0}
                 bind:group={품목.productInfo.itemType} />
               <span>일반</span>
             </label>
@@ -715,7 +723,7 @@
                 bind:group={품목.productInfo.itemType} />
               <span>데모(50%)</span>
             </label>
-            {#if FORCED}
+            {#if realForced}
               <label class="app_radio">
                 <input type="radio" id="id_{인덱스}_itemType4" name="itemType_{인덱스}" onchange={() => 수동입력활성화({ 품목 })} value={3} bind:group={품목.productInfo.itemType} />
                 <span>특별건</span>
@@ -808,7 +816,7 @@
                   <label for="id_{인덱스}_dome_price" class="app_label block">공급단가</label>
                 </div>
                 <div class="app_text_input" data-label="원">
-                  <input type="text" id="id_{인덱스}_dome_price" class={[FORCED && 품목.productInfo.itemType === 3 && "editable"]} style="cursor: {품목.productInfo.itemType == 3 ? 'normal' : 'not-allowed'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price)), e => 가격계산(e, 품목, "공급단가")} readonly={품목.productInfo.itemType == 3 ? false : true} />
+                  <input type="text" id="id_{인덱스}_dome_price" class={[realForced && 품목.productInfo.itemType === 3 && "editable"]} style="cursor: {품목.productInfo.itemType == 3 ? 'normal' : 'not-allowed'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.dome_price)), e => 가격계산(e, 품목, "공급단가")} readonly={품목.productInfo.itemType == 3 ? false : true} />
                 </div>
               </div>
               <div class="app_col" style="--flex-basis: 10%;">
@@ -816,14 +824,14 @@
                   <label for="id_{인덱스}_qty" class="app_label block">수량</label>
                 </div>
                 <div class={["app_text_input", 품목.default_margin && !품목.productInfo.itemType && !할인조건계산(품목) && "qty"]} data-label="개" data-discqty={할인조건계산(품목, true)}>
-                  <input type="text" class={["app_text_input", FORCED && 품목.productInfo.itemType === 3 && "editable"]} data-label="개" class:failed={품목.failed && !품목.productInfo.qty} readonly={품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? true : false} style="cursor: {품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? 'not-allowed' : 'normal'}" id="id_{인덱스}_qty" bind:value={() => new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty))), e => 가격계산(e, 품목, "수량")} />
+                  <input type="text" class={["app_text_input", realForced && 품목.productInfo.itemType === 3 && "editable"]} data-label="개" class:failed={품목.failed && !품목.productInfo.qty} readonly={품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? true : false} style="cursor: {품목.productInfo.itemType === 1 || 품목.productInfo.itemType === 2 ? 'not-allowed' : 'normal'}" id="id_{인덱스}_qty" bind:value={() => new Intl.NumberFormat("ko-KR").format(Math.floor(Number(품목.productInfo.qty))), e => 가격계산(e, 품목, "수량")} />
                 </div>
               </div>
               <div class="app_col" style="--flex-basis: 10%;">
                 <div>
                   <label for="id_{인덱스}_margin" class="app_label block">마진(%)</label>
                 </div>
-                <input type="text" id="id_{인덱스}_margin" class={[FORCED && 품목.productInfo.itemType === 3 && "editable"]} style="cursor: {품목.productInfo.itemType == 3 ? 'normal' : 'not-allowed'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin)), e => 가격계산(e, 품목, "마진")} readonly={품목.productInfo.itemType == 3 ? false : true} />
+                <input type="text" id="id_{인덱스}_margin" class={[realForced && 품목.productInfo.itemType === 3 && "editable"]} style="cursor: {품목.productInfo.itemType == 3 ? 'normal' : 'not-allowed'}" bind:value={() => new Intl.NumberFormat("ko-KR").format(Number(품목.productInfo.margin)), e => 가격계산(e, 품목, "마진")} readonly={품목.productInfo.itemType == 3 ? false : true} />
               </div>
               <div class="app_col" style="--flex-basis: 40%;">
                 <div>
@@ -867,11 +875,11 @@
   </div>
   {#if 선택상자열림}
     <!-- 선택상자를 열 때 컴포넌트가 노출된다. -->
-    <Selectbox bind:선택상자 bind:선택상자열림 bind:직접입력선택상자 bind:선택상자요소배열 bind:선택상자호출자 bind:품절팝업열림 bind:발주서상태 {선택상자선택항목} {선택상자필터} {선택상자항목} {전체품목} {선택상자조정} {isHTMLElement} {품목명입력란} {배송형태} {전자배송팝업내용} {전자배송팝업열림} {가격계산} {FORCED} />
+    <Selectbox bind:선택상자 bind:선택상자열림 bind:직접입력선택상자 bind:선택상자요소배열 bind:선택상자호출자 bind:품절팝업열림 bind:발주서상태 {선택상자선택항목} {선택상자필터} {선택상자항목} {전체품목} {선택상자조정} {isHTMLElement} {품목명입력란} {배송형태} {전자배송팝업내용} {전자배송팝업열림} {가격계산} {realForced} />
   {/if}
 </div>
 {#if 엑셀데이터선택창 && 엑셀데이터.length}
-  <ExcelImport bind:엑셀데이터 bind:엑셀데이터선택창 bind:품목리스트 bind:엑셀로딩 {전체품목} />
+  <ExcelImport bind:엑셀데이터 bind:엑셀데이터선택창 bind:품목리스트 bind:엑셀로딩 {전체품목} {품목추가} />
 {/if}
 {#if 품절팝업열림}
   <Portal target=".soldoutDialog .swal2-html-container">

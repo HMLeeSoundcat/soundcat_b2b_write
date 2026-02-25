@@ -28,10 +28,10 @@
     전자배송팝업열림: boolean;
     발주서상태: string;
     가격계산: (e: number | string | undefined, 품목: 품목리스트항목타입, 필드: string | undefined, 계산할브랜드: string | undefined) => void;
-    FORCED: boolean;
+    realForced: boolean;
   }
 
-  let { 전체품목, 선택상자 = $bindable(), 선택상자선택항목, 선택상자호출자 = $bindable(), 선택상자열림 = $bindable(), 선택상자조정, 직접입력선택상자 = $bindable(), 선택상자필터, 선택상자항목, 선택상자요소배열 = $bindable(), isHTMLElement, 품절팝업열림 = $bindable(), 품목명입력란, 배송형태, 전자배송팝업내용, 전자배송팝업열림, 발주서상태 = $bindable(), 가격계산, FORCED }: 프롭스타입 = $props();
+  let { 전체품목, 선택상자 = $bindable(), 선택상자선택항목, 선택상자호출자 = $bindable(), 선택상자열림 = $bindable(), 선택상자조정, 직접입력선택상자 = $bindable(), 선택상자필터, 선택상자항목, 선택상자요소배열 = $bindable(), isHTMLElement, 품절팝업열림 = $bindable(), 품목명입력란, 배송형태, 전자배송팝업내용, 전자배송팝업열림, 발주서상태 = $bindable(), 가격계산, realForced }: 프롭스타입 = $props();
 
   function 선택상자닫기(e: Event) {
     if (!((isHTMLElement(e.target) && isHTMLElement(선택상자) && 선택상자.contains(e.target)) || (isHTMLElement(선택상자호출자.요소) && isHTMLElement(e.target) && 선택상자호출자.요소.contains(e.target)))) {
@@ -124,7 +124,7 @@
     if (품목) {
       const 마진셋업 = typeof 전체품목[브랜드][인덱스].default_margin == "object" ? 전체품목[브랜드][인덱스].default_margin : undefined;
       품목.default_margin = 마진셋업;
-      if (!FORCED) return;
+      if (!realForced) return;
       if (!마진셋업) 품목.productInfo.itemType = 3;
       const 현재수량 = 품목.productInfo.qty ?? 0;
       const 타겟마진 = 현재수량 >= 숫자로변환(마진셋업?.per_user?.discount_qty ?? 마진셋업?.discount_qty, 999) ? 숫자로변환(마진셋업?.per_user?.discount_margin ?? 마진셋업?.discount_margin) : 숫자로변환(마진셋업?.per_user?.default_margin ?? 마진셋업?.default_margin);
