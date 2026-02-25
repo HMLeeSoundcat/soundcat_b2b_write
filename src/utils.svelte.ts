@@ -63,13 +63,17 @@ export async function 품목가져오기(): Promise<any> {
       restrict: realForced,
     };
 
-    if (useDev) body.mb_id = "test";
+    const headers : Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (useDev) {
+      body.mb_id = "test";
+      headers.UseDev = "true";
+    }
 
     const 품목가져오기 = await fetch("https://b2b.soundcat.com/page/get_products.php", {
-      headers: {
-        "Content-Type": "application/json",
-        "UseDev": useDev ? "true" : "false",
-      },
+      headers,
       method: "POST",
       body: JSON.stringify(body),
     });

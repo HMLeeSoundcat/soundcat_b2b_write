@@ -227,7 +227,7 @@
           PROD_CD: 줄.PROD_CD || "etc_001",
           brand: 줄.brand || "",
           sell_price: 숫자로변환(줄.출처?.price, 0),
-          dome_price: 0,
+          dome_price: 숫자로변환(줄.출처?.price, 0),
           qty: 줄.수량 ? 숫자로변환(줄.수량, 0) : 0,
           margin: 0,
           total_dome: 0,
