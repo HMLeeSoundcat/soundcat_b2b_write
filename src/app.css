@@ -92,6 +92,7 @@
   height: calc(1em - 4px);
   position: absolute;
   left: 4px;
+  top: 6px;
   transition: 0.1s;
 }
 .app_radio:has(input[type="radio"]:checked)::after {
