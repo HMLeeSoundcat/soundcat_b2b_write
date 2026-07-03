@@ -37,6 +37,7 @@
 
   let 선택상자선택항목: number = $state(-1);
   let 직접입력선택상자: HTMLElement | undefined = $state();
+  let 선택중인품목원본: 품목리스트항목타입 | undefined = $state();
 
   let 품절팝업열림: boolean = $state(false);
   let 품절팝업내용: HTMLElement | undefined = $state();
@@ -246,11 +247,12 @@
 
   /**
    * 데모 40%, 50%를 클릭하면 마진과 수량을 제한한다.
-   * @param e Change 이벤트
+   * 이벤트가 아닌 수동 호출의 경우 품목으로부터 아이템타입을 가져와 계산한다.
+   * @param e Change 이벤트 또는 미지정
    * @param 품목 발주서 품목 요소
    */
-  function 데모반영(e: Event, 품목: 품목리스트항목타입) {
-    const 값 = parseInt((e?.currentTarget as HTMLButtonElement)?.value);
+  function 데모반영(e: Event | undefined, 품목: 품목리스트항목타입) {
+    const 값 = parseInt(e ? (e?.currentTarget as HTMLButtonElement)?.value : 품목.productInfo.itemType.toString());
     if (값 == 1 || 값 == 2) {
       품목.productInfo.margin = 값 == 1 ? 40 : 50;
       품목.productInfo.qty = 1;
@@ -359,6 +361,7 @@
       유형,
     };
     선택상자항목 = [];
+    선택중인품목원본 = $state.snapshot(품목);
 
     const 브랜드 = 품목.productInfo.brand;
 
@@ -463,6 +466,14 @@
     if (!(e.currentTarget as HTMLInputElement).value) {
       선택상자선택항목 = -1;
     }
+  }
+
+  function 수동입력초기화(품목: 품목리스트항목타입) {
+    const 대상품목 = 품목.uuid;
+    const 대상품목인덱스 = 품목리스트.findIndex((x) => x.uuid == 대상품목);
+    if (!(대상품목인덱스 >= 0 && 선택중인품목원본)) return;
+    품목리스트[대상품목인덱스] = 선택중인품목원본;
+    선택중인품목원본 = undefined;
   }
 
   /** 창 위치와 사이즈가 변경된 경우를 필드에 따라붙도록 */
@@ -853,7 +864,7 @@
       </div>
     {/each}
   </div>
-  <div class="app_footer app_row">
+  <div class="app_footer app_row" data-version={__APP_VERSION__}>
     <button
       type="button"
       onclick={(e) => {
@@ -882,7 +893,7 @@
   </div>
   {#if 선택상자열림}
     <!-- 선택상자를 열 때 컴포넌트가 노출된다. -->
-    <Selectbox bind:선택상자 bind:선택상자열림 bind:직접입력선택상자 bind:선택상자요소배열 bind:선택상자호출자 bind:품절팝업열림 bind:발주서상태 {선택상자선택항목} {선택상자필터} {선택상자항목} {전체품목} {선택상자조정} {isHTMLElement} {품목명입력란} {배송형태} {전자배송팝업내용} {전자배송팝업열림} {가격계산} {realForced} />
+    <Selectbox bind:선택상자 bind:선택상자열림 bind:직접입력선택상자 bind:선택상자요소배열 bind:선택상자호출자 bind:품절팝업열림 bind:발주서상태 {선택상자선택항목} {선택상자필터} {선택상자항목} {전체품목} {선택상자조정} {isHTMLElement} {품목명입력란} {배송형태} {전자배송팝업내용} {전자배송팝업열림} {가격계산} {데모반영} {수동입력초기화} {realForced} />
   {/if}
 </div>
 {#if 엑셀데이터선택창 && 엑셀데이터.length}
