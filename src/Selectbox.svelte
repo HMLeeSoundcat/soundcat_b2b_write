@@ -28,13 +28,16 @@
     전자배송팝업열림: boolean;
     발주서상태: string;
     가격계산: (e: number | string | undefined, 품목: 품목리스트항목타입, 필드: string | undefined, 계산할브랜드: string | undefined) => void;
+    데모반영: (e: Event | undefined, 품목: 품목리스트항목타입) => void;
+    수동입력초기화: (품목: 품목리스트항목타입) => void;
     realForced: boolean;
   }
 
-  let { 전체품목, 선택상자 = $bindable(), 선택상자선택항목, 선택상자호출자 = $bindable(), 선택상자열림 = $bindable(), 선택상자조정, 직접입력선택상자 = $bindable(), 선택상자필터, 선택상자항목, 선택상자요소배열 = $bindable(), isHTMLElement, 품절팝업열림 = $bindable(), 품목명입력란, 배송형태, 전자배송팝업내용, 전자배송팝업열림, 발주서상태 = $bindable(), 가격계산, realForced }: 프롭스타입 = $props();
+  let { 전체품목, 선택상자 = $bindable(), 선택상자선택항목, 선택상자호출자 = $bindable(), 선택상자열림 = $bindable(), 선택상자조정, 직접입력선택상자 = $bindable(), 선택상자필터, 선택상자항목, 선택상자요소배열 = $bindable(), isHTMLElement, 품절팝업열림 = $bindable(), 품목명입력란, 배송형태, 전자배송팝업내용, 전자배송팝업열림, 발주서상태 = $bindable(), 가격계산, 데모반영, 수동입력초기화, realForced }: 프롭스타입 = $props();
 
   function 선택상자닫기(e: Event) {
     if (!((isHTMLElement(e.target) && isHTMLElement(선택상자) && 선택상자.contains(e.target)) || (isHTMLElement(선택상자호출자.요소) && isHTMLElement(e.target) && 선택상자호출자.요소.contains(e.target)))) {
+      if (선택상자호출자?.품목) 수동입력초기화(선택상자호출자.품목);
       선택상자열림 = false;
     }
   }
@@ -252,7 +255,7 @@
         품목.productInfo.product = 선택항목.product;
         if (요소 instanceof HTMLInputElement) 요소.value = 선택항목.product ?? "";
         if (!품목.productInfo.brand) return;
-        const 인덱스 = 전체품목[품목.productInfo.brand].findIndex(x => x.product == 품목?.productInfo.product);
+        const 인덱스 = 전체품목[품목.productInfo.brand].findIndex((x) => x.product == 품목?.productInfo.product);
 
         if (인덱스 != -1) {
           품목.productInfo.sell_price = Number(전체품목[품목.productInfo.brand][인덱스].price);
@@ -267,7 +270,8 @@
           품목.productInfo.total_dome = 품목.productInfo.dome_price * (품목.productInfo.qty ?? 0);
           품목.productInfo.PROD_CD = 전체품목[품목.productInfo.brand][인덱스].PROD_CD;
         }
-        가격계산(undefined, 품목, undefined, 품목.productInfo.brand);
+        if (품목.productInfo.itemType == 1 || 품목.productInfo.itemType == 2) 데모반영(undefined, 품목);
+        else 가격계산(undefined, 품목, undefined, 품목.productInfo.brand);
       }
       선택항목.checking = false;
 
